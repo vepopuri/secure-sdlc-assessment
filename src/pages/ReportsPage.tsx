@@ -6,8 +6,14 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
+  FormControlLabel,
   Grid,
   Paper,
   Snackbar,
@@ -26,6 +32,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PrintIcon from '@mui/icons-material/Print';
+import SlideshowIcon from '@mui/icons-material/Slideshow';
 import { frameworks } from '../data/frameworks';
 import { useAppData } from '../context/useAppData';
 import { scoreFramework, topGaps } from '../utils/scoring';
@@ -36,15 +43,30 @@ import { MaturityBarChart } from '../components/MaturityBarChart';
 import { MATURITY_LABELS, observationId } from '../types';
 import type { Framework } from '../types';
 import { buildCustomFramework } from '../utils/customFramework';
+import { DEFAULT_PPTX_OPTIONS, exportEngagementPptx } from '../utils/pptxExport';
+import type { PptxExportOptions } from '../utils/pptxExport';
 
 const ROADMAP_PHASES: RoadmapPhase[] = ['Now (0 to 30 days)', 'Next (31 to 90 days)', 'Later (90+ days)'];
 
+const PPTX_OPTION_LABELS: { key: keyof PptxExportOptions; label: string }[] = [
+  { key: 'scope', label: 'Scope and objectives' },
+  { key: 'executiveSummary', label: 'Executive summary' },
+  { key: 'initiatives', label: 'Key initiatives' },
+  { key: 'observationsGaps', label: 'Key observations and gaps' },
+  { key: 'maturityIndustry', label: 'Maturity score vs. industry' },
+  { key: 'roadmap', label: 'Roadmap' },
+  { key: 'detailedDomains', label: 'Detailed domain slides (one per assessed control)' },
+];
+
 export function ReportsPage() {
-  const { observations, evidence, scope, loading, customControls } = useAppData();
+  const { observations, evidence, scope, loading, customControls, scopeDocument } = useAppData();
   const [frameworkIndex, setFrameworkIndex] = useState(0);
   const [story, setStory] = useState('');
   const [peerInputs, setPeerInputs] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
+  const [pptxDialogOpen, setPptxDialogOpen] = useState(false);
+  const [pptxOptions, setPptxOptions] = useState<PptxExportOptions>(DEFAULT_PPTX_OPTIONS);
+  const [pptxGenerating, setPptxGenerating] = useState(false);
 
   if (loading) return null;
 
@@ -108,6 +130,24 @@ export function ReportsPage() {
     }
   }
 
+  async function handleGeneratePptx() {
+    setPptxGenerating(true);
+    try {
+      await exportEngagementPptx({
+        options: pptxOptions,
+        scopeDocument,
+        executiveSummary,
+        peerRows,
+        gaps: aggregatedGaps,
+        roadmap,
+        detailedGroups: scopedFrameworks.map(buildDetailedGroup),
+      });
+      setPptxDialogOpen(false);
+    } finally {
+      setPptxGenerating(false);
+    }
+  }
+
   return (
     <Box>
       <Typography variant="h5" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -122,12 +162,21 @@ export function ReportsPage() {
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
             Executive summary
           </Typography>
-          <Stack direction="row" spacing={1} className="no-print">
+          <Stack direction="row" spacing={1} className="no-print" flexWrap="wrap" rowGap={1}>
             <Button size="small" startIcon={<ContentCopyIcon />} onClick={handleCopyReport}>
               Copy report as text
             </Button>
             <Button size="small" variant="outlined" startIcon={<PrintIcon />} onClick={() => window.print()}>
               Print / save as PDF
+            </Button>
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={<SlideshowIcon />}
+              sx={{ bgcolor: '#86BC25', '&:hover': { bgcolor: '#75A521' } }}
+              onClick={() => setPptxDialogOpen(true)}
+            >
+              Export as PowerPoint
             </Button>
           </Stack>
         </Stack>
@@ -410,6 +459,36 @@ export function ReportsPage() {
           Report copied to clipboard
         </Alert>
       </Snackbar>
+
+      <Dialog open={pptxDialogOpen} onClose={() => setPptxDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Export as PowerPoint</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            Choose which slides to include. The deck is generated entirely in your browser from the
+            same data shown above.
+          </Typography>
+          <Stack>
+            {PPTX_OPTION_LABELS.map((opt) => (
+              <FormControlLabel
+                key={opt.key}
+                control={
+                  <Checkbox
+                    checked={pptxOptions[opt.key]}
+                    onChange={(e) => setPptxOptions((prev) => ({ ...prev, [opt.key]: e.target.checked }))}
+                  />
+                }
+                label={<Typography variant="body2">{opt.label}</Typography>}
+              />
+            ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setPptxDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" disabled={pptxGenerating} onClick={handleGeneratePptx}>
+            {pptxGenerating ? 'Generating...' : 'Generate PowerPoint'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

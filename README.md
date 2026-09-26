@@ -28,56 +28,46 @@ for evidence file bytes). Clearing site data resets the app.
 - MUI v7 (`@mui/material`, `@mui/icons-material`, `@emotion/react`, `@emotion/styled`)
 - `react-router-dom` v7
 - `oxlint` for linting
-- No chart library — charts are custom SVG components (see `src/components/MaturityBarChart.tsx`)
+- No chart library for on-screen charts — custom SVG components (see
+  `src/components/MaturityBarChart.tsx`); `pptxgenjs` generates the
+  PowerPoint export client-side (see below)
 
 ## Pages
 
-- **Home** (`/`) — the landing page and engagement setup in one place. A
-  dark, professional header (no scoring here — that lives on Reports) with
-  an **engagement workflow ribbon** — eight stages from Kickoff through
-  Review & Finalize, each with its own icon, connected by a progress line.
-  A stage lights up done/current/upcoming from real data (has a review
-  level been set, has scope been finalized, is there any evidence, etc.) —
-  it's a live status readout, not decoration. Below that:
-  - **Engagement details** — review level (application-level vs.
-    organization-level), type of application or organization, and
-    compliance requirements (PCI DSS, HIPAA, SOC 2, …), all autosaved as
-    they're set. The type field's label and options switch depending on
-    review level — application types (Web Application, API/Microservice,
-    …) for an application-level review, organization types (Business Unit,
-    Subsidiary, …) for an organization-level one — since the two levels
-    aren't describing the same kind of thing.
-  - **Scope description** — a free-text engagement scope document you can
-    write directly or fill from an **uploaded file** (a plain-text/Markdown
-    upload auto-fills the description if it's empty; any file type can be
-    attached, downloaded, and removed). Copy it to the clipboard, or run
-    "Suggest controls" to open a **review-and-finalize dialog**: a
-    keyword-based shortlist of controls the document seems to mention
-    (per framework, adjustable via checkbox), plus an "Add other controls"
-    picker to browse each framework's full catalog and bring in anything
-    the keyword match missed — nothing changes the scope checklist until
-    "Finalize scope" is clicked. None of this is required to start
-    assessing — it's reference material, not a gate.
-  - **Fine-tune specific controls (optional)** — a collapsed, secondary
-    per-framework checklist. Every control is in scope by default;
-    deselect what doesn't apply and add it back at any time.
-- **Assessment Workspace** (`/assessment`) — tabs across the three
-  frameworks. An accordion tree of in-scope functions → controls on the left
-  (collapsed by default; each row shows a status icon); a detail panel on
-  the right with the control's description/guidance, **the question to ask
-  the client** and **a sample strong answer** for calibration, a 0–3
-  maturity rating selector, a notes textarea (autosaves on blur), and
-  evidence linking. Each linked evidence item gets its own row with an
-  editable **section/page reference** (e.g., "Section 3.2, p.14") so a
-  control can cite exactly where in a document — or across several
-  documents — its answer comes from; linking evidence (like rating) bumps
-  a not-started control to in-progress automatically.
-- **Evidence Library** (`/evidence`) — a grid of evidence cards, an upload
-  dialog (multi-file upload, or an interview note), a preview dialog, and
-  delete.
-- **Reports** (`/reports`) — tabbed per-framework maturity-by-function chart
-  plus a "top gaps" table (in-scope controls unrated or rated ≤ 1, worst
-  first).
+- **Home** (`/`) — a clean hero (title, one summary paragraph, two CTAs,
+  an animated Deloitte-palette background, and three interactive framework
+  badges) plus a "Where would you like to start?" grid of four clickable
+  step cards. Below that: **Engagement details** (review level,
+  application/organization type, compliance requirements, all autosaved)
+  and **Scope description** (free text, optional PDF/Word/PowerPoint
+  upload, copy to clipboard, and "Suggest" to open the review-and-finalize
+  controls dialog). Review level, type, and compliance requirements feed
+  the control suggester alongside the free-text description.
+- **Assessment Workspace** (`/assessment`) — tabs across SAMM, NIST CSF,
+  NIST SSDF, and a 4th **Custom** framework built from combined or
+  hand-written controls (see Architecture below). An accordion tree of
+  in-scope functions → controls on the left (collapsed by default, status
+  icon and a "Suggested" chip per row); a detail panel on the right with
+  the control's description/guidance, the question to ask the client and a
+  sample strong answer, a status/rating selector, an observations textarea,
+  and evidence linking with a per-link section/page reference. An
+  "Auto-suggest" assistant drafts a rating and observations from whatever
+  evidence is linked (and redrafts automatically the moment new evidence
+  is linked), always reviewable and editable, never applied silently over
+  a rating already confirmed by hand; "Auto-suggest all" runs it across an
+  entire framework.
+- **Evidence Library** (`/evidence`) — three titled sections
+  (Documentation upload, Meeting notes upload, Additional notes upload),
+  each with its own Add button opening straight to that upload type. Every
+  item shows a stable `REF-###` reference number, its kind, date, size,
+  and tags; a preview dialog and delete are available from any card.
+- **Reports** (`/reports`) — a cross-framework engagement report
+  (executive summary, maturity vs. a reviewer-entered peer benchmark, key
+  gaps, a Now/Next/Later roadmap, and per-framework detailed
+  observations), exportable as a clipboard text document, a browser
+  print/PDF, or a real `.pptx` generated client-side with a slide
+  checklist — plus the original tabbed per-framework maturity chart and
+  gap table underneath.
 
 ## Architecture
 
@@ -238,6 +228,35 @@ calls `window.print()`; a `.no-print` class (`src/index.css`, applied to
 the nav bar in `Layout.tsx` and to the story box, peer inputs, and tabs in
 `ReportsPage.tsx`) hides everything that isn't part of the report itself
 in the printed output.
+
+### PowerPoint export (`src/utils/pptxExport.ts`)
+
+"Export as PowerPoint" opens a checklist (Scope and objectives, Executive
+summary, Key initiatives, Key observations and gaps, Maturity vs.
+industry, Roadmap, Detailed domain slides) and generates a real `.pptx`
+entirely client-side with `pptxgenjs` (no backend, no template file) from
+the same computed report data as the on-screen report and the text
+export, styled with the app's own Deloitte palette (dark cover slide,
+green/blue accents, a bar chart for the peer comparison when a benchmark
+is set). Detailed domain slides are capped to controls that actually have
+a rating, observations, or linked evidence, one slide per control, grouped
+behind a divider slide per framework, so an unstarted assessment doesn't
+produce dozens of blank slides.
+
+### Custom framework (`src/utils/customFramework.ts`, `customFrameworkService.ts`, `CustomFrameworkDialog.tsx`)
+
+A 4th "Custom" tab on Assessment and Reports, backed by a plain
+`Control[]` persisted in localStorage. `buildCustomFramework` wraps that
+list in the same `Framework` shape every built-in catalog uses, so a
+custom control rates, links evidence, and reports exactly like a
+SAMM/CSF/SSDF one, with no special-casing anywhere except where the
+framework list itself is assembled (`[...frameworks, buildCustomFramework(customControls)]`
+in `AssessmentPage.tsx` and `ReportsPage.tsx`). `CustomFrameworkDialog`
+adds to it two ways: describe the domains or controls you want covered
+and it matches offline (the same keyword heuristic as the scope
+suggester) across all three built-in catalogs for one-click copying, or
+write a control by hand (code, name, description, question, sample
+answer).
 
 ### Charts (`src/components/MaturityBarChart.tsx`)
 
