@@ -16,6 +16,10 @@ export interface Control {
   name: string;
   description: string;
   guidance?: string;
+  /** The question a reviewer would ask the client to assess this control. */
+  question: string;
+  /** An example of what a strong, well-implemented answer looks like — calibration for reviewers. */
+  sampleAnswer: string;
 }
 
 export interface FrameworkFunction {

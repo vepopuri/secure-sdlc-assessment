@@ -28,6 +28,8 @@ import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import DonutLargeIcon from '@mui/icons-material/DonutLarge';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import { frameworks } from '../data/frameworks';
 import { useAppData } from '../context/useAppData';
 import type { Control, MaturityRating, ObservationStatus } from '../types';
@@ -251,6 +253,33 @@ export function AssessmentPage() {
                   {selected.control.guidance}
                 </Typography>
               )}
+
+              <Stack spacing={1.5} sx={{ mb: 2 }}>
+                <Box sx={{ bgcolor: 'background.default', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                  <Stack direction="row" spacing={1} alignItems="flex-start">
+                    <HelpOutlineIcon fontSize="small" sx={{ color: '#00A3E0', mt: 0.25 }} />
+                    <Box>
+                      <Typography variant="caption" sx={{ fontWeight: 700, display: 'block' }}>
+                        Question to ask the client
+                      </Typography>
+                      <Typography variant="body2">{selected.control.question}</Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+                <Box sx={{ bgcolor: 'background.default', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                  <Stack direction="row" spacing={1} alignItems="flex-start">
+                    <LightbulbOutlinedIcon fontSize="small" sx={{ color: '#86BC25', mt: 0.25 }} />
+                    <Box>
+                      <Typography variant="caption" sx={{ fontWeight: 700, display: 'block' }}>
+                        What a strong answer looks like
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {selected.control.sampleAnswer}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+              </Stack>
 
               <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
                 Status

@@ -42,8 +42,12 @@ for evidence file bytes). Clearing site data resets the app.
     write directly or fill from an **uploaded file** (a plain-text/Markdown
     upload auto-fills the description if it's empty; any file type can be
     attached, downloaded, and removed). Copy it to the clipboard, or run
-    "Suggest controls" for a keyword-based shortlist of controls the
-    document seems to mention. None of this is required to start
+    "Suggest controls" to open a **review-and-finalize dialog**: a
+    keyword-based shortlist of controls the document seems to mention
+    (per framework, adjustable via checkbox), plus an "Add other controls"
+    picker to browse each framework's full catalog and bring in anything
+    the keyword match missed — nothing changes the scope checklist until
+    "Finalize scope" is clicked. None of this is required to start
     assessing — it's reference material, not a gate.
   - **Fine-tune specific controls (optional)** — a collapsed, secondary
     per-framework checklist. Every control is in scope by default;
@@ -51,8 +55,10 @@ for evidence file bytes). Clearing site data resets the app.
 - **Assessment Workspace** (`/assessment`) — tabs across the three
   frameworks. An accordion tree of in-scope functions → controls on the left
   (collapsed by default; each row shows a status icon); a detail panel on
-  the right with a 0–3 maturity rating selector, a notes textarea (autosaves
-  on blur), and an evidence linking control.
+  the right with the control's description/guidance, **the question to ask
+  the client** and **a sample strong answer** for calibration, a 0–3
+  maturity rating selector, a notes textarea (autosaves on blur), and an
+  evidence linking control.
 - **Evidence Library** (`/evidence`) — a grid of evidence cards, an upload
   dialog (multi-file upload, or an interview note), a preview dialog, and
   delete.
@@ -70,7 +76,11 @@ functions/categories, SSDF's practice groups/practices), but every control is
 rated on the same normalized 0–3 maturity scale (`MaturityRating`) via a
 separate `Observation` record (`{ frameworkId, controlId, status, rating,
 notes, evidenceIds }`). This is what makes cross-framework dashboards and
-reports possible without forcing the frameworks into a shared shape.
+reports possible without forcing the frameworks into a shared shape. Every
+`Control` also carries a `question` (what to ask the client to assess it)
+and a `sampleAnswer` (what a strong, well-implemented answer looks like, for
+reviewer calibration) — authored faithfully for all 71 controls across the
+three frameworks and shown in the Assessment Workspace's detail panel.
 
 ### Framework registry (`src/data/frameworks`)
 
@@ -150,8 +160,13 @@ Two independent pieces of scope state, both served by `scopeService.ts`:
 is a pure, offline keyword match (no backend, no AI call) between the scope
 document's text and each control's name/description/guidance, requiring at
 least two distinct keyword matches to filter out coincidental single-word
-hits. It only ever proposes controls in a dialog for the reviewer to accept
-or reject — it never edits the `ScopeSelection` checklist on its own.
+hits. `SuggestControlsDialog` (`src/components/scope/`) turns that into a
+review-and-finalize step, not an automatic decision: suggestions are
+adjustable checkboxes (grouped per framework, with tabs to move between
+them), an "Add other controls" autocomplete lets the reviewer browse each
+framework's full catalog for anything the keywords missed, and only
+clicking "Finalize scope" merges the reviewed set into that framework's
+`ScopeSelection`.
 
 ### Charts (`src/components/MaturityBarChart.tsx`)
 
@@ -196,12 +211,15 @@ src/
 - `npm run lint` — oxlint clean, no warnings.
 - Drove the app end-to-end in headless Chromium (Playwright) across all four
   pages: filled in the Home page's engagement details (review level,
-  application type, compliance requirements), wrote and uploaded a scope
-  document (confirming the attachment chip, copy-to-clipboard, and control
-  suggestions all work), narrowed the fine-tune control checklist and
-  confirmed the change flowed through to Assessment/Reports, confirmed the
-  same scope reference (intake chips + text) is readable from the
-  Assessment Workspace, added evidence (including a multi-file upload) to
-  the Evidence Library, and rated/annotated controls with linked evidence
-  across frameworks. Confirmed the Reports charts update live with correct
-  averages and gap listings. No console or page errors were observed.
+  application type, compliance requirements), wrote a scope document, ran
+  "Suggest controls" and confirmed the per-framework tabs, adjustable
+  suggestion checkboxes, and "Add other controls" autocomplete all update
+  the live selection count before finalizing, narrowed the fine-tune
+  control checklist and confirmed the change flowed through to
+  Assessment/Reports, confirmed the same scope reference (intake chips +
+  text) is readable from the Assessment Workspace along with each selected
+  control's assessment question and sample answer, added evidence
+  (including a multi-file upload) to the Evidence Library, and
+  rated/annotated controls with linked evidence across frameworks.
+  Confirmed the Reports charts update live with correct averages and gap
+  listings. No console or page errors were observed.
