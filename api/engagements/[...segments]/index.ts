@@ -12,9 +12,8 @@
 // the equivalent bracket-named FOLDER with an index.ts inside it.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import type { NeonQueryFunction } from '@neondatabase/serverless';
 import { randomBytes, createHash } from 'node:crypto';
-import { getSql } from '../../_lib/db';
+import { getSql, type SqlFn } from '../../_lib/db';
 import { requireSession, requireMember, requireRole, sendError, HttpError, type EngagementRole } from '../../_lib/authz';
 
 const VALID_ROLES: EngagementRole[] = ['owner', 'reviewer', 'viewer'];
@@ -164,7 +163,7 @@ interface UpdateRoleBody {
   role?: EngagementRole;
 }
 
-async function countOwners(sql: NeonQueryFunction<false, false>, engagementId: string): Promise<number> {
+async function countOwners(sql: SqlFn, engagementId: string): Promise<number> {
   const rows = await sql`
     select count(*)::int as count from engagement_members where engagement_id = ${engagementId} and role = 'owner'
   `;

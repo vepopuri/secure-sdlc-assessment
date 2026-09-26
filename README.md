@@ -60,8 +60,19 @@ engagement data is actually shared between members.
   using the `cookie` npm package — its v2 major dropped its CommonJS
   entry point entirely (ESM-only), which risks an `ERR_REQUIRE_ESM` crash
   at cold start on Vercel's Node runtime, before a function's own
-  try/catch ever runs. `package.json` also pins `"engines": {"node":
-  ">=20.0.0"}` since `@neondatabase/serverless` requires it.
+  try/catch ever runs.
+- **DB access is `pg` (node-postgres), not `@neondatabase/serverless`.**
+  The Neon HTTP driver was the original choice (a natural fit for
+  serverless), and it worked perfectly locally (`npm run migrate`,
+  every manual test) — but every deployed function that so much as
+  imported it crashed with a bare `FUNCTION_INVOCATION_FAILED`, even
+  ones with zero other logic, before its own try/catch ever ran. This
+  was the single hardest bug in this phase to pin down, precisely
+  because it was invisible locally. `api/_lib/db.ts` now exports a
+  `sql` tagged-template function backed by `pg.Client`, API-compatible
+  with how the Neon driver was called, so no call site needed to
+  change. `package.json` still pins `"engines": {"node": ">=20.0.0"}`
+  as a reasonable baseline.
 - **Passwords** are hashed with `bcryptjs` (pure JS, no native bindings —
   avoids the classic Vercel serverless build failure with native `bcrypt`).
 - **Email verification is mandatory**: signup creates the account but does

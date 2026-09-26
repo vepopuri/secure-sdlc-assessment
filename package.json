@@ -18,8 +18,8 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.11",
     "@mui/material": "^7.3.11",
-    "@neondatabase/serverless": "^1.1.0",
     "bcryptjs": "^3.0.3",
+    "pg": "^8.23.0",
     "pptxgenjs": "^4.0.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vercel/node": "^16.0.1",

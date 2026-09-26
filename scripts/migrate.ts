@@ -2,17 +2,12 @@
 // tracking what's already applied in a schema_migrations table. No
 // Prisma Migrate/Flyway, consistent with this project's no-ORM approach.
 //
-// Uses @neondatabase/serverless's Client (not the `neon()` HTTP tagged
-// template used by api/_lib/db.ts) because migrations need multi-statement,
-// transactional execution, which the low-latency HTTP query function
-// doesn't support.
-//
 // Usage: DATABASE_URL=<neon connection string> npm run migrate
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Client } from '@neondatabase/serverless';
+import { Client } from 'pg';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = join(__dirname, '..', 'db', 'migrations');
