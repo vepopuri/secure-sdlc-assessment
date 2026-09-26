@@ -9,6 +9,7 @@ import {
   Button,
   Chip,
   Grid,
+  IconButton,
   List,
   ListItemButton,
   ListItemIcon,
@@ -30,9 +31,10 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
+import CloseIcon from '@mui/icons-material/Close';
 import { frameworks } from '../data/frameworks';
 import { useAppData } from '../context/useAppData';
-import type { Control, MaturityRating, ObservationStatus } from '../types';
+import type { Control, Evidence, MaturityRating, ObservationStatus } from '../types';
 import { MATURITY_LABELS } from '../types';
 import { applyScope, includedControlIdsFor } from '../utils/scope';
 
@@ -112,9 +114,40 @@ export function AssessmentPage() {
     upsertObservation({ frameworkId: framework.id, controlId: selected.control.id, notes: notesDraft });
   }
 
-  function handleEvidenceChange(ids: string[]) {
+  function handleAddEvidenceLink(item: Evidence) {
     if (!selected) return;
-    upsertObservation({ frameworkId: framework.id, controlId: selected.control.id, evidenceIds: ids });
+    const current = observation?.evidenceLinks ?? [];
+    if (current.some((link) => link.evidenceId === item.id)) return;
+    upsertObservation({
+      frameworkId: framework.id,
+      controlId: selected.control.id,
+      evidenceLinks: [...current, { evidenceId: item.id, section: '' }],
+      // Linking evidence is a concrete step toward answering the control —
+      // reflect that automatically, same as a rating does.
+      status: !observation || observation.status === 'not-started' ? 'in-progress' : observation.status,
+    });
+  }
+
+  function handleRemoveEvidenceLink(evidenceId: string) {
+    if (!selected || !observation) return;
+    upsertObservation({
+      frameworkId: framework.id,
+      controlId: selected.control.id,
+      evidenceLinks: observation.evidenceLinks.filter((link) => link.evidenceId !== evidenceId),
+    });
+  }
+
+  function handleEvidenceSectionBlur(evidenceId: string, section: string) {
+    if (!selected || !observation) return;
+    const existingLink = observation.evidenceLinks.find((link) => link.evidenceId === evidenceId);
+    if ((existingLink?.section ?? '') === section) return;
+    upsertObservation({
+      frameworkId: framework.id,
+      controlId: selected.control.id,
+      evidenceLinks: observation.evidenceLinks.map((link) =>
+        link.evidenceId === evidenceId ? { ...link, section } : link,
+      ),
+    });
   }
 
   function statusFor(control: Control): ObservationStatus {
@@ -336,19 +369,46 @@ export function AssessmentPage() {
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
                 Linked evidence
               </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                Link one or more evidence items, and note which page or section of each one supports
+                this control.
+              </Typography>
+              {(observation?.evidenceLinks ?? []).length > 0 && (
+                <Stack spacing={1} sx={{ mb: 1.5 }}>
+                  {(observation?.evidenceLinks ?? []).map((link) => {
+                    const item = evidence.find((e) => e.id === link.evidenceId);
+                    if (!item) return null;
+                    return (
+                      <Stack key={link.evidenceId} direction="row" spacing={1} alignItems="center">
+                        <Chip label={item.title} size="small" sx={{ flexShrink: 0, maxWidth: 180 }} />
+                        <TextField
+                          size="small"
+                          fullWidth
+                          placeholder="Section / page reference (optional)"
+                          defaultValue={link.section ?? ''}
+                          onBlur={(e) => handleEvidenceSectionBlur(link.evidenceId, e.target.value)}
+                        />
+                        <IconButton
+                          size="small"
+                          aria-label={`Remove ${item.title}`}
+                          onClick={() => handleRemoveEvidenceLink(link.evidenceId)}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
+                    );
+                  })}
+                </Stack>
+              )}
               <Autocomplete
-                multiple
-                options={evidence}
+                // Remounts after every add/remove so the input clears instead of
+                // sticking on the option label just picked (value stays null by design).
+                key={(observation?.evidenceLinks ?? []).length}
+                options={evidence.filter((item) => !(observation?.evidenceLinks ?? []).some((link) => link.evidenceId === item.id))}
                 getOptionLabel={(item) => item.title}
-                value={evidence.filter((item) => observation?.evidenceIds.includes(item.id))}
-                onChange={(_e, values) => handleEvidenceChange(values.map((v) => v.id))}
-                renderInput={(params) => <TextField {...params} placeholder="Link evidence..." />}
-                renderTags={(value, getTagProps) =>
-                  value.map((option, index) => {
-                    const { key, ...rest } = getTagProps({ index });
-                    return <Chip key={key} label={option.title} size="small" {...rest} />;
-                  })
-                }
+                value={null}
+                onChange={(_e, value) => value && handleAddEvidenceLink(value)}
+                renderInput={(params) => <TextField {...params} placeholder="Add evidence..." />}
               />
             </Paper>
           ) : (

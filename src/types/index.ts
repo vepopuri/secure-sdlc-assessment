@@ -42,6 +42,12 @@ export interface Framework {
 
 export type ObservationStatus = 'not-started' | 'in-progress' | 'complete';
 
+/** One piece of evidence linked to an observation, optionally pointing at where in it — a page, section, or timestamp. */
+export interface EvidenceLink {
+  evidenceId: string;
+  section?: string;
+}
+
 export interface Observation {
   id: string; // `${frameworkId}:${controlId}`
   frameworkId: string;
@@ -49,7 +55,7 @@ export interface Observation {
   status: ObservationStatus;
   rating: MaturityRating | null;
   notes: string;
-  evidenceIds: string[];
+  evidenceLinks: EvidenceLink[];
   updatedAt: string; // ISO timestamp
 }
 

@@ -33,11 +33,20 @@ for evidence file bytes). Clearing site data resets the app.
 ## Pages
 
 - **Home** (`/`) — the landing page and engagement setup in one place. A
-  dark, professional header (no scoring here — that lives on Reports)
-  above:
+  dark, professional header (no scoring here — that lives on Reports) with
+  an **engagement workflow ribbon** — eight stages from Kickoff through
+  Review & Finalize, each with its own icon, connected by a progress line.
+  A stage lights up done/current/upcoming from real data (has a review
+  level been set, has scope been finalized, is there any evidence, etc.) —
+  it's a live status readout, not decoration. Below that:
   - **Engagement details** — review level (application-level vs.
-    organization-level), type of application, and compliance requirements
-    (PCI DSS, HIPAA, SOC 2, …), all autosaved as they're set.
+    organization-level), type of application or organization, and
+    compliance requirements (PCI DSS, HIPAA, SOC 2, …), all autosaved as
+    they're set. The type field's label and options switch depending on
+    review level — application types (Web Application, API/Microservice,
+    …) for an application-level review, organization types (Business Unit,
+    Subsidiary, …) for an organization-level one — since the two levels
+    aren't describing the same kind of thing.
   - **Scope description** — a free-text engagement scope document you can
     write directly or fill from an **uploaded file** (a plain-text/Markdown
     upload auto-fills the description if it's empty; any file type can be
@@ -57,8 +66,12 @@ for evidence file bytes). Clearing site data resets the app.
   (collapsed by default; each row shows a status icon); a detail panel on
   the right with the control's description/guidance, **the question to ask
   the client** and **a sample strong answer** for calibration, a 0–3
-  maturity rating selector, a notes textarea (autosaves on blur), and an
-  evidence linking control.
+  maturity rating selector, a notes textarea (autosaves on blur), and
+  evidence linking. Each linked evidence item gets its own row with an
+  editable **section/page reference** (e.g., "Section 3.2, p.14") so a
+  control can cite exactly where in a document — or across several
+  documents — its answer comes from; linking evidence (like rating) bumps
+  a not-started control to in-progress automatically.
 - **Evidence Library** (`/evidence`) — a grid of evidence cards, an upload
   dialog (multi-file upload, or an interview note), a preview dialog, and
   delete.
@@ -75,12 +88,20 @@ catalog structure faithfully (SAMM's practices/streams, CSF's
 functions/categories, SSDF's practice groups/practices), but every control is
 rated on the same normalized 0–3 maturity scale (`MaturityRating`) via a
 separate `Observation` record (`{ frameworkId, controlId, status, rating,
-notes, evidenceIds }`). This is what makes cross-framework dashboards and
+notes, evidenceLinks }`). This is what makes cross-framework dashboards and
 reports possible without forcing the frameworks into a shared shape. Every
 `Control` also carries a `question` (what to ask the client to assess it)
 and a `sampleAnswer` (what a strong, well-implemented answer looks like, for
 reviewer calibration) — authored faithfully for all 71 controls across the
 three frameworks and shown in the Assessment Workspace's detail panel.
+
+`evidenceLinks` is `{ evidenceId, section? }[]` rather than a flat id
+list — each link can carry an optional pointer (a page, section, or
+timestamp) to where in that evidence the answer actually comes from, and a
+control can cite several evidence items at once. `assessmentService.ts`
+transparently migrates observations still holding the older flat
+`evidenceIds: string[]` shape (from before this existed) into the new form
+on read, so nothing already in a browser's localStorage breaks.
 
 ### Framework registry (`src/data/frameworks`)
 
@@ -168,6 +189,19 @@ framework's full catalog for anything the keywords missed, and only
 clicking "Finalize scope" merges the reviewed set into that framework's
 `ScopeSelection`.
 
+### Engagement workflow (`src/components/EngagementWorkflow.tsx`)
+
+Renders the eight-stage ribbon on Home (Kickoff → Scope Finalization →
+Document Collection & Meeting Scheduling → Documentation Review →
+Interviews → Process Data & Validate → Prepare Report → Review & Finalize).
+Each stage's done/current/upcoming state is a boolean derived from data
+already in `AppDataContext` (e.g., "Interviews" is done once any evidence
+has `kind: 'interview-note'`; "Process Data & Validate" is done once any
+observation has a rating) — never fabricated progress. The first not-done
+stage in order is "current" and gets the glow; nothing before it is ever
+un-done once its underlying data exists, since these are one-way signals
+(you can't accidentally "undo" having entered a review level).
+
 ### Charts (`src/components/MaturityBarChart.tsx`)
 
 A plain SVG horizontal bar chart: one bar per function/category, length =
@@ -201,7 +235,7 @@ src/
   utils/scoring.ts     pure scoring functions used by Reports
   utils/scope.ts       pure scope-filtering functions shared by Home/Assessment/Reports
   utils/suggest.ts     pure keyword control-suggestion function used on Home
-  components/          shared UI (Layout, MaturityBarChart, evidence/scope dialogs)
+  components/          shared UI (Layout, MaturityBarChart, EngagementWorkflow, evidence/scope dialogs)
   pages/               HomePage, AssessmentPage, EvidencePage, ReportsPage
 ```
 
@@ -210,16 +244,17 @@ src/
 - `npm install && npm run build` — typecheck + production build succeed.
 - `npm run lint` — oxlint clean, no warnings.
 - Drove the app end-to-end in headless Chromium (Playwright) across all four
-  pages: filled in the Home page's engagement details (review level,
-  application type, compliance requirements), wrote a scope document, ran
-  "Suggest controls" and confirmed the per-framework tabs, adjustable
-  suggestion checkboxes, and "Add other controls" autocomplete all update
-  the live selection count before finalizing, narrowed the fine-tune
-  control checklist and confirmed the change flowed through to
-  Assessment/Reports, confirmed the same scope reference (intake chips +
-  text) is readable from the Assessment Workspace along with each selected
-  control's assessment question and sample answer, added evidence
-  (including a multi-file upload) to the Evidence Library, and
-  rated/annotated controls with linked evidence across frameworks.
-  Confirmed the Reports charts update live with correct averages and gap
-  listings. No console or page errors were observed.
+  pages: watched the Home page's workflow ribbon advance live as review
+  level was set and scope/evidence/ratings were added, confirmed the
+  application-type/organization-type field swaps correctly with review
+  level, wrote a scope document, ran "Suggest controls" and confirmed the
+  per-framework tabs, adjustable suggestion checkboxes, and "Add other
+  controls" autocomplete all update the live selection count before
+  finalizing, narrowed the fine-tune control checklist and confirmed the
+  change flowed through to Assessment/Reports, linked two evidence items to
+  a control with distinct section references and confirmed both the values
+  and the automatic not-started → in-progress status bump survive a page
+  reload, removed one link and confirmed only it disappeared, and
+  rated/annotated controls with evidence across frameworks. Confirmed the
+  Reports charts update live with correct averages and gap listings. No
+  console or page errors were observed.

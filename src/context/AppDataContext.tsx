@@ -53,7 +53,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const removeEvidence = useCallback(async (id: string) => {
     await evidenceService.remove(id);
     setEvidence((prev) => prev.filter((e) => e.id !== id));
-    setObservations((prev) => prev.map((o) => ({ ...o, evidenceIds: o.evidenceIds.filter((e) => e !== id) })));
+    setObservations((prev) => {
+      const affected = prev.filter((o) => o.evidenceLinks.some((link) => link.evidenceId === id));
+      for (const o of affected) {
+        assessmentService.upsert({
+          frameworkId: o.frameworkId,
+          controlId: o.controlId,
+          evidenceLinks: o.evidenceLinks.filter((link) => link.evidenceId !== id),
+        });
+      }
+      return prev.map((o) =>
+        o.evidenceLinks.some((link) => link.evidenceId === id)
+          ? { ...o, evidenceLinks: o.evidenceLinks.filter((link) => link.evidenceId !== id) }
+          : o,
+      );
+    });
   }, []);
 
   const getEvidenceObjectUrl = useCallback(async (id: string) => evidenceService.getObjectUrl(id), []);

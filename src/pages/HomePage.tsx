@@ -9,6 +9,7 @@ import {
   Button,
   Checkbox,
   Chip,
+  Divider,
   FormControlLabel,
   Grid,
   Paper,
@@ -33,6 +34,7 @@ import { useAppData } from '../context/useAppData';
 import { includedControlIdsFor } from '../utils/scope';
 import { formatBytes } from '../utils/formatBytes';
 import { SuggestControlsDialog } from '../components/scope/SuggestControlsDialog';
+import { EngagementWorkflow } from '../components/EngagementWorkflow';
 import type { ReviewLevel } from '../types';
 
 const APPLICATION_TYPES = [
@@ -42,6 +44,15 @@ const APPLICATION_TYPES = [
   'Cloud Infrastructure',
   'Desktop Application',
   'Data Pipeline / Batch Service',
+  'Other',
+];
+
+const ORGANIZATION_TYPES = [
+  'Business Unit',
+  'Subsidiary / Legal Entity',
+  'Department / Function',
+  'Product Line / Portfolio',
+  'Entire Enterprise',
   'Other',
 ];
 
@@ -177,7 +188,7 @@ export function HomePage() {
           Define the engagement below, describe its scope, then assess controls across OWASP SAMM,
           NIST CSF, and NIST SSDF on one normalized 0&ndash;3 maturity scale.
         </Typography>
-        <Stack direction="row" spacing={1.5} justifyContent="center">
+        <Stack direction="row" spacing={1.5} justifyContent="center" sx={{ mb: 4 }}>
           <Button
             variant="contained"
             endIcon={<ArrowForwardIcon />}
@@ -194,6 +205,12 @@ export function HomePage() {
             View reports
           </Button>
         </Stack>
+
+        <Divider sx={{ borderColor: 'rgba(255,255,255,0.12)', mb: 3 }} />
+
+        <Box sx={{ textAlign: 'left' }}>
+          <EngagementWorkflow />
+        </Box>
       </Box>
 
       <Grid container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
@@ -210,7 +227,17 @@ export function HomePage() {
                   fullWidth
                   size="small"
                   value={scopeDocument?.reviewLevel ?? null}
-                  onChange={(_e, value: ReviewLevel | null) => value && updateScopeDocument({ reviewLevel: value })}
+                  onChange={(_e, value: ReviewLevel | null) => {
+                    if (!value) return;
+                    const nextOptions = value === 'organization' ? ORGANIZATION_TYPES : APPLICATION_TYPES;
+                    const currentType = scopeDocument?.applicationType ?? '';
+                    updateScopeDocument({
+                      reviewLevel: value,
+                      // The two levels use different type vocabularies — clear a
+                      // selection that no longer makes sense under the new level.
+                      applicationType: nextOptions.includes(currentType) ? currentType : '',
+                    });
+                  }}
                 >
                   <ToggleButton value="application" sx={{ textTransform: 'none' }}>
                     Application-level
@@ -223,13 +250,13 @@ export function HomePage() {
               <TextField
                 select
                 fullWidth
-                label="Type of application"
+                label={scopeDocument?.reviewLevel === 'organization' ? 'Type of organization' : 'Type of application'}
                 value={scopeDocument?.applicationType ?? ''}
                 onChange={(e) => updateScopeDocument({ applicationType: e.target.value })}
                 slotProps={{ select: { native: true } }}
               >
                 <option value="" />
-                {APPLICATION_TYPES.map((opt) => (
+                {(scopeDocument?.reviewLevel === 'organization' ? ORGANIZATION_TYPES : APPLICATION_TYPES).map((opt) => (
                   <option key={opt} value={opt}>
                     {opt}
                   </option>
