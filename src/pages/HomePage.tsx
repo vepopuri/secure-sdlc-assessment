@@ -247,8 +247,8 @@ export function HomePage() {
           position: 'relative',
           overflow: 'hidden',
           borderRadius: 2,
-          p: { xs: 3, sm: 6 },
-          mb: 4,
+          p: { xs: 2.5, sm: 4 },
+          mb: 3,
           textAlign: 'center',
           color: '#FFFFFF',
           backgroundImage: 'linear-gradient(120deg, #1c2420, #282728, #123244, #282728)',
@@ -261,12 +261,12 @@ export function HomePage() {
           },
         }}
       >
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.75 }}>
           Secure SDLC Assessment
         </Typography>
         <Typography
           variant="body1"
-          sx={{ maxWidth: 640, mx: 'auto', mb: 3, color: 'rgba(255,255,255,0.8)' }}
+          sx={{ maxWidth: 640, mx: 'auto', mb: 2, color: 'rgba(255,255,255,0.8)' }}
         >
           A single workspace for running secure software development lifecycle assessments, from
           kickoff through final report. Scope the engagement, collect evidence, interview
@@ -274,7 +274,7 @@ export function HomePage() {
           stay comparable, defensible, and ready to present.
         </Typography>
 
-        <Stack direction="row" spacing={1.5} justifyContent="center" flexWrap="wrap" sx={{ gap: 1.5, mb: 4 }}>
+        <Stack direction="row" spacing={1.5} justifyContent="center" flexWrap="wrap" sx={{ gap: 1.5, mb: 2.5 }}>
           {frameworks.map((f) => (
             <FrameworkBadge
               key={f.id}
