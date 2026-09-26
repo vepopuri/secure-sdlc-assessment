@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Evidence, Observation, ScopeSelection } from '../types';
+import type { Evidence, Observation, ScopeDocument, ScopeSelection } from '../types';
 import * as evidenceService from '../services/evidenceService';
 import * as assessmentService from '../services/assessmentService';
 import * as scopeService from '../services/scopeService';
@@ -18,17 +18,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [observations, setObservations] = useState<Observation[]>([]);
   const [scope, setScope] = useState<ScopeSelection[]>([]);
+  const [scopeDocument, setScopeDocument] = useState<ScopeDocument | undefined>(undefined);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([evidenceService.list(), assessmentService.list(), scopeService.list()]).then(([ev, obs, scp]) => {
-      if (cancelled) return;
-      setEvidence(ev);
-      setObservations(obs);
-      setScope(scp);
-      setLoading(false);
-    });
+    Promise.all([evidenceService.list(), assessmentService.list(), scopeService.list(), scopeService.getDocument()]).then(
+      ([ev, obs, scp, doc]) => {
+        if (cancelled) return;
+        setEvidence(ev);
+        setObservations(obs);
+        setScope(scp);
+        setScopeDocument(doc);
+        setLoading(false);
+      },
+    );
     return () => {
       cancelled = true;
     };
@@ -87,11 +91,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return saved;
   }, []);
 
+  const setScopeDocumentText = useCallback(async (text: string) => {
+    const saved = await scopeService.setDocument(text);
+    setScopeDocument(saved);
+    return saved;
+  }, []);
+
   const value = useMemo<AppDataContextValue>(
     () => ({
       evidence,
       observations,
       scope,
+      scopeDocument,
       loading,
       addEvidenceFile,
       addEvidenceNote,
@@ -100,11 +111,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       upsertObservation,
       getObservation,
       setScopeIncluded,
+      setScopeDocumentText,
     }),
     [
       evidence,
       observations,
       scope,
+      scopeDocument,
       loading,
       addEvidenceFile,
       addEvidenceNote,
@@ -113,6 +126,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       upsertObservation,
       getObservation,
       setScopeIncluded,
+      setScopeDocumentText,
     ],
   );
 

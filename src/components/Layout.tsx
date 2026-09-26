@@ -9,6 +9,9 @@ const NAV_ITEMS = [
   { label: 'Reports', path: '/reports' },
 ];
 
+const DARK_SURFACE = '#282728';
+const NEON_GREEN = '#86EB22';
+
 function BrandMark() {
   return (
     <Box
@@ -36,19 +39,32 @@ export function Layout() {
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Deloitte brand signature: 4px green top bar */}
       <Box sx={{ height: 4, background: 'linear-gradient(90deg, #86BC25, #86EB22)' }} />
-      <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: '1px solid rgba(11,11,11,0.08)' }}>
+      {/* Dark professional header, per Deloitte's dark-theme guidance (neon green on dark) */}
+      <AppBar position="static" elevation={0} sx={{ bgcolor: DARK_SURFACE }}>
         <Toolbar sx={{ gap: 2 }}>
           <BrandMark />
-          <Typography variant="h6" component="div" sx={{ fontWeight: 700, mr: 3 }}>
+          <Typography variant="h6" component="div" sx={{ fontWeight: 700, mr: 3, color: '#FFFFFF' }}>
             Secure SDLC Assessment
           </Typography>
           <Tabs
             value={currentIndex}
             onChange={(_event, index) => navigate(NAV_ITEMS[index].path)}
-            sx={{ minHeight: 48 }}
+            sx={{
+              minHeight: 48,
+              '& .MuiTabs-indicator': { backgroundColor: NEON_GREEN, height: 3 },
+            }}
           >
             {NAV_ITEMS.map((item) => (
-              <Tab key={item.path} label={item.label} sx={{ minHeight: 48, textTransform: 'none' }} />
+              <Tab
+                key={item.path}
+                label={item.label}
+                sx={{
+                  minHeight: 48,
+                  textTransform: 'none',
+                  color: 'rgba(255,255,255,0.75)',
+                  '&.Mui-selected': { color: NEON_GREEN, fontWeight: 700 },
+                }}
+              />
             ))}
           </Tabs>
         </Toolbar>

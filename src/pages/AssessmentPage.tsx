@@ -3,8 +3,10 @@ import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
+  Alert,
   Autocomplete,
   Box,
+  Button,
   Chip,
   Grid,
   List,
@@ -12,6 +14,8 @@ import {
   ListItemIcon,
   ListItemText,
   Paper,
+  Snackbar,
+  Stack,
   Tab,
   Tabs,
   TextField,
@@ -23,6 +27,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import DonutLargeIcon from '@mui/icons-material/DonutLarge';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { frameworks } from '../data/frameworks';
 import { useAppData } from '../context/useAppData';
 import type { Control, MaturityRating, ObservationStatus } from '../types';
@@ -48,7 +53,8 @@ const STATUS_OPTIONS: { value: ObservationStatus; label: string }[] = [
 ];
 
 export function AssessmentPage() {
-  const { getObservation, upsertObservation, evidence, scope } = useAppData();
+  const { getObservation, upsertObservation, evidence, scope, scopeDocument } = useAppData();
+  const [copied, setCopied] = useState(false);
   const [frameworkIndex, setFrameworkIndex] = useState(0);
   const rawFramework = frameworks[frameworkIndex];
   const framework = applyScope(rawFramework, includedControlIdsFor(scope, rawFramework.id));
@@ -121,6 +127,35 @@ export function AssessmentPage() {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Rate each control on the normalized 0–3 maturity scale and link supporting evidence.
       </Typography>
+
+      {scopeDocument?.text.trim() && (
+        <Accordion disableGutters variant="outlined" sx={{ mb: 2 }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="subtitle2">Engagement scope reference</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+              <Button
+                size="small"
+                startIcon={<ContentCopyIcon />}
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(scopeDocument.text);
+                    setCopied(true);
+                  } catch {
+                    // Clipboard access can be denied by the browser; nothing to recover from here.
+                  }
+                }}
+              >
+                Copy
+              </Button>
+            </Stack>
+            <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
+              {scopeDocument.text}
+            </Typography>
+          </AccordionDetails>
+        </Accordion>
+      )}
 
       <Tabs
         value={frameworkIndex}
@@ -272,6 +307,12 @@ export function AssessmentPage() {
           )}
         </Grid>
       </Grid>
+
+      <Snackbar open={copied} autoHideDuration={2000} onClose={() => setCopied(false)}>
+        <Alert severity="success" variant="filled" onClose={() => setCopied(false)}>
+          Copied to clipboard
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

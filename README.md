@@ -36,10 +36,14 @@ for evidence file bytes). Clearing site data resets the app.
   (frameworks, controls assessed, evidence items, overall weighted average
   maturity) plus a score card per framework with a maturity-by-function bar
   chart. All figures respect the current assessment scope (see below).
-- **Scope** (`/scope`) — define which controls apply to this engagement,
-  per framework, before or while assessing. Every control is in scope by
-  default; deselect what doesn't apply (individually or a whole function at
-  once) and add controls back from the overall catalog at any time.
+- **Scope** (`/scope`) — write (and copy) a free-text engagement scope
+  document as the primary artifact: what's being assessed, boundaries,
+  exclusions. It's reference material, not a checklist — nothing about it is
+  required to start assessing. Optionally run "Suggest controls" to get a
+  keyword-based shortlist of controls the document seems to mention, or
+  fine-tune the per-control checklist yourself in a collapsed, secondary
+  section (every control is in scope by default; deselect what doesn't
+  apply and add it back at any time).
 - **Assessment Workspace** (`/assessment`) — tabs across the three
   frameworks. An accordion tree of in-scope functions → controls on the left
   (collapsed by default; each row shows a status icon); a detail panel on
@@ -113,18 +117,31 @@ Pure functions with no I/O: `scoreFunction`, `scoreFramework`,
 call these with the frameworks + observations they already have from
 `AppDataContext` — the scoring math lives in exactly one place.
 
-### Assessment scope (`src/utils/scope.ts`, `scopeService.ts`)
+### Assessment scope (`src/utils/scope.ts`, `src/utils/suggest.ts`, `scopeService.ts`)
 
-A `ScopeSelection` (`{ frameworkId, includedControlIds }`) records which
-controls of a framework are in scope for this engagement; **no record for a
-framework means "everything is in scope"** (the default), so the app works
-unchanged until someone visits the Scope page. `applyScope(framework,
-includedControlIds)` in `utils/scope.ts` returns a copy of a `Framework`
-containing only in-scope controls (and only the functions that still have at
-least one); Dashboard, Assessment, and Reports all call it before scoring or
-rendering, so narrowing scope is the single lever that changes what's shown
-and counted everywhere. `scopeService.ts` follows the same
-storage-layer pattern as the other two services.
+Two independent pieces of scope state, both served by `scopeService.ts`:
+
+- A `ScopeDocument` (`{ text, updatedAt }`) — the free-text description of
+  the engagement, edited on the Scope page, autosaved on blur, and readable
+  (read-only, with a Copy button) from a collapsed panel on the Assessment
+  Workspace so it's on hand during review. It has no effect on what's
+  rated or counted — it's pure reference material.
+- A `ScopeSelection` (`{ frameworkId, includedControlIds }`) per framework,
+  which does drive what's rated and counted; **no record for a framework
+  means "everything is in scope"** (the default), so the app works
+  unchanged until someone edits the checklist. `applyScope(framework,
+  includedControlIds)` in `utils/scope.ts` returns a copy of a `Framework`
+  containing only in-scope controls (and only the functions that still have
+  at least one); Dashboard, Assessment, and Reports all call it before
+  scoring or rendering, so narrowing this checklist is the one lever that
+  changes what's shown and counted everywhere.
+
+`utils/suggest.ts` bridges the two: `suggestControls(scopeText, frameworks)`
+is a pure, offline keyword match (no backend, no AI call) between the scope
+document's text and each control's name/description/guidance, requiring at
+least two distinct keyword matches to filter out coincidental single-word
+hits. It only ever proposes controls in a dialog for the reviewer to accept
+or reject — it never edits the `ScopeSelection` checklist on its own.
 
 ### Charts (`src/components/MaturityBarChart.tsx`)
 
@@ -136,13 +153,16 @@ showing "X of Y controls rated". No chart library is used.
 
 ### Visual design
 
-The UI follows Deloitte's digital brand guidance: Deloitte Green (`#86BC25`)
-as the primary accent (buttons, active nav, chart bars, stat-tile accents), a
-4px green gradient signature bar at the very top of the app, Open Sans
-typography, and a subtle circular motif on the Dashboard hero — decorative
-only, kept low-opacity so it never competes with the data. Colors and
-typography live in `src/theme.ts` (MUI theme) plus `index.html` (font
-loading) and `src/index.css` (page background).
+The UI follows Deloitte's digital brand guidance: a dark gray (`#282728`)
+header with white nav text and a neon-green (`#86EB22`) active state — the
+brand's own dark-theme pairing, chosen for a more professional, console-like
+feel — under a 4px green gradient signature bar; Deloitte Green (`#86BC25`)
+as the primary accent everywhere else (buttons, chart bars, stat-tile
+accents); Open Sans typography; and a subtle circular motif on the Dashboard
+hero, kept low-opacity so it never competes with the data. Colors and
+typography live in `src/theme.ts` (MUI theme) and `src/components/Layout.tsx`
+(header), plus `index.html` (font loading) and `src/index.css` (page
+background).
 
 ## Project layout
 
@@ -155,7 +175,8 @@ src/
   context/             AppDataContext — the only way pages touch persisted data
   utils/scoring.ts     pure scoring functions shared by Dashboard + Reports
   utils/scope.ts       pure scope-filtering functions shared by Dashboard/Assessment/Reports
-  components/          shared UI (Layout, MaturityBarChart, evidence dialogs)
+  utils/suggest.ts     pure keyword control-suggestion function used by the Scope page
+  components/          shared UI (Layout, MaturityBarChart, evidence/scope dialogs)
   pages/               DashboardPage, ScopePage, AssessmentPage, EvidencePage, ReportsPage
 ```
 
@@ -167,7 +188,10 @@ src/
   pages: added a file and an interview note to the Evidence Library (plus a
   multi-file upload creating separate evidence items), narrowed scope on the
   Scope page and confirmed the change flowed through to the Assessment
-  Workspace/Dashboard/Reports, rated and annotated controls (with linked
-  evidence) in the Assessment Workspace across two frameworks, and confirmed
-  the Dashboard and Reports charts update live with correct averages and gap
-  listings. No console or page errors were observed.
+  Workspace/Dashboard/Reports, wrote a scope document, copied it to the
+  clipboard, ran control suggestions from it and applied a subset, confirmed
+  the same document is readable from the Assessment Workspace's reference
+  panel, and rated/annotated controls (with linked evidence) in the
+  Assessment Workspace across two frameworks. Confirmed the Dashboard and
+  Reports charts update live with correct averages and gap listings. No
+  console or page errors were observed.

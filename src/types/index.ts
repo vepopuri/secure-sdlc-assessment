@@ -80,3 +80,16 @@ export interface ScopeSelection {
   frameworkId: string;
   includedControlIds: string[];
 }
+
+/**
+ * The free-text description of the engagement's scope — what's being
+ * assessed, boundaries, exclusions. Independent of the per-control
+ * ScopeSelection checklist: it's reference material a reviewer can write
+ * once, copy elsewhere, and consult later, and it can suggest which controls
+ * to include rather than requiring them to be picked by hand.
+ */
+export interface ScopeDocument {
+  id: 'engagement-scope';
+  text: string;
+  updatedAt: string; // ISO timestamp
+}
