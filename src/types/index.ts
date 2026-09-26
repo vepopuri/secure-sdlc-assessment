@@ -1,0 +1,71 @@
+// Core domain model shared across all frameworks and pages.
+
+/** Normalized maturity scale used for every framework, regardless of its native catalog structure. */
+export type MaturityRating = 0 | 1 | 2 | 3;
+
+export const MATURITY_LABELS: Record<MaturityRating, string> = {
+  0: 'Not Implemented',
+  1: 'Partially Implemented',
+  2: 'Largely Implemented',
+  3: 'Fully Implemented',
+};
+
+export interface Control {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  guidance?: string;
+}
+
+export interface FrameworkFunction {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  controls: Control[];
+}
+
+export interface Framework {
+  id: string;
+  name: string;
+  shortName: string;
+  version: string;
+  description: string;
+  reference: string;
+  functions: FrameworkFunction[];
+}
+
+export type ObservationStatus = 'not-started' | 'in-progress' | 'complete';
+
+export interface Observation {
+  id: string; // `${frameworkId}:${controlId}`
+  frameworkId: string;
+  controlId: string;
+  status: ObservationStatus;
+  rating: MaturityRating | null;
+  notes: string;
+  evidenceIds: string[];
+  updatedAt: string; // ISO timestamp
+}
+
+export type EvidenceKind = 'document' | 'interview-note' | 'image' | 'other';
+
+export interface Evidence {
+  id: string;
+  kind: EvidenceKind;
+  title: string;
+  fileName?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  notes?: string;
+  tags: string[];
+  addedAt: string; // ISO timestamp
+  hasBlob: boolean;
+  /** For interview notes: the note body text itself (stored as metadata, not a blob). */
+  noteBody?: string;
+}
+
+export function observationId(frameworkId: string, controlId: string): string {
+  return `${frameworkId}:${controlId}`;
+}
