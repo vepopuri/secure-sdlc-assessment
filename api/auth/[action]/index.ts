@@ -56,9 +56,17 @@ async function handleSignup(req: VercelRequest, res: VercelResponse) {
   // No session is created here on purpose: the account can't be signed
   // into until the email is verified.
   const verificationToken = await createVerificationToken(user.id);
-  await sendVerificationEmail(user.email, verificationToken);
+  const { sent, verifyUrl } = await sendVerificationEmail(user.email, verificationToken);
 
-  res.status(201).json({ status: 'verification-required', email: user.email });
+  // Email delivery isn't configured yet on this deployment (no
+  // RESEND_API_KEY) -- hand back the verification link directly so signup
+  // still works end-to-end without it. Once RESEND_API_KEY is set, `sent`
+  // is true and this field is omitted.
+  res.status(201).json({
+    status: 'verification-required',
+    email: user.email,
+    ...(sent ? {} : { verifyUrl }),
+  });
 }
 
 interface LoginBody {
@@ -197,15 +205,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return await handleVerifyEmail(req, res);
       case 'resend-verification':
         return await handleResendVerification(req, res);
-      case 'debug-config':
-        // TEMP DEBUG: booleans only, never the actual values -- remove after checking.
-        res.status(200).json({
-          hasResendApiKey: !!process.env.RESEND_API_KEY,
-          hasEmailFrom: !!process.env.EMAIL_FROM,
-          hasAppBaseUrl: !!process.env.APP_BASE_URL,
-          hasDatabaseUrl: !!(process.env.DATABASE_URL ?? process.env.POSTGRES_URL),
-        });
-        return;
       default:
         res.status(404).json({ error: 'Not found.' });
     }

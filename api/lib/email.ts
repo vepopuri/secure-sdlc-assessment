@@ -6,17 +6,24 @@ function appBaseUrl(): string {
   return 'http://localhost:5173';
 }
 
-export async function sendVerificationEmail(email: string, token: string): Promise<void> {
+export interface SendVerificationResult {
+  sent: boolean;
+  verifyUrl: string;
+}
+
+export async function sendVerificationEmail(email: string, token: string): Promise<SendVerificationResult> {
+  const verifyUrl = `${appBaseUrl()}/verify-email?token=${token}`;
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     // Mirrors api/generate-report.ts's pattern: don't crash the request just
-    // because an optional-at-first integration isn't configured yet.
+    // because an optional-at-first integration isn't configured yet. The
+    // caller surfaces `verifyUrl` directly in the API response in this case,
+    // so signup/resend still work end-to-end without Resend configured.
     console.warn('RESEND_API_KEY is not set; skipping verification email send.');
-    return;
+    return { sent: false, verifyUrl };
   }
 
   const resend = new Resend(apiKey);
-  const verifyUrl = `${appBaseUrl()}/verify-email?token=${token}`;
   const from = process.env.EMAIL_FROM ?? 'Secure SDLC Assessment <onboarding@resend.dev>';
 
   const { error } = await resend.emails.send({
@@ -33,4 +40,5 @@ export async function sendVerificationEmail(email: string, token: string): Promi
   if (error) {
     throw new Error(`Failed to send verification email: ${error.message}`);
   }
+  return { sent: true, verifyUrl };
 }
