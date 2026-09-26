@@ -56,15 +56,14 @@ const COMPLIANCE_OPTIONS = [
   'CCPA',
 ];
 
-function HeroMotif() {
+function CardHeader({ children }: { children: React.ReactNode }) {
   return (
-    <Box sx={{ position: 'absolute', top: -60, right: -60, width: 220, height: 220, pointerEvents: 'none' }} aria-hidden>
-      <svg viewBox="0 0 200 200" width="220" height="220">
-        <circle cx="100" cy="100" r="90" fill="none" stroke="#86EB22" strokeWidth="1.5" opacity={0.3} />
-        <circle cx="100" cy="100" r="65" fill="none" stroke="#00A3E0" strokeWidth="1.5" opacity={0.3} />
-        <circle cx="100" cy="100" r="40" fill="none" stroke="#FFFFFF" strokeWidth="1.5" opacity={0.2} />
-      </svg>
-    </Box>
+    <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 2.5 }}>
+      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#86BC25', flexShrink: 0 }} aria-hidden />
+      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+        {children}
+      </Typography>
+    </Stack>
   );
 }
 
@@ -160,24 +159,25 @@ export function HomePage() {
     <Box>
       <Box
         sx={{
-          position: 'relative',
-          overflow: 'hidden',
           bgcolor: '#282728',
           color: '#FFFFFF',
           borderRadius: 2,
-          p: { xs: 3, sm: 4 },
-          mb: 3,
+          p: { xs: 3, sm: 5 },
+          mb: 4,
+          textAlign: 'center',
         }}
       >
-        <HeroMotif />
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5, maxWidth: 640 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
           Secure SDLC Assessment
         </Typography>
-        <Typography variant="body1" sx={{ maxWidth: 560, mb: 2, color: 'rgba(255,255,255,0.8)' }}>
+        <Typography
+          variant="body1"
+          sx={{ maxWidth: 560, mx: 'auto', mb: 3, color: 'rgba(255,255,255,0.8)' }}
+        >
           Define the engagement below, describe its scope, then assess controls across OWASP SAMM,
           NIST CSF, and NIST SSDF on one normalized 0&ndash;3 maturity scale.
         </Typography>
-        <Stack direction="row" spacing={1.5}>
+        <Stack direction="row" spacing={1.5} justifyContent="center">
           <Button
             variant="contained"
             endIcon={<ArrowForwardIcon />}
@@ -196,104 +196,103 @@ export function HomePage() {
         </Stack>
       </Box>
 
-      <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderLeft: '3px solid #86BC25' }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
-          Engagement details
-        </Typography>
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Review level
-            </Typography>
-            <ToggleButtonGroup
-              exclusive
-              fullWidth
-              size="small"
-              value={scopeDocument?.reviewLevel ?? null}
-              onChange={(_e, value: ReviewLevel | null) => value && updateScopeDocument({ reviewLevel: value })}
-            >
-              <ToggleButton value="application" sx={{ textTransform: 'none' }}>
-                Application-level
-              </ToggleButton>
-              <ToggleButton value="organization" sx={{ textTransform: 'none' }}>
-                Organization-level
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              select
-              fullWidth
-              label="Type of application"
-              value={scopeDocument?.applicationType ?? ''}
-              onChange={(e) => updateScopeDocument({ applicationType: e.target.value })}
-              slotProps={{ select: { native: true } }}
-            >
-              <option value="" />
-              {APPLICATION_TYPES.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </TextField>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Autocomplete
-              multiple
-              freeSolo
-              options={COMPLIANCE_OPTIONS}
-              value={scopeDocument?.complianceRequirements ?? []}
-              onChange={(_e, value) => updateScopeDocument({ complianceRequirements: value as string[] })}
-              renderInput={(params) => <TextField {...params} label="Compliance requirements" />}
-            />
-          </Grid>
+      <Grid container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Paper variant="outlined" sx={{ p: 3, height: '100%' }}>
+            <CardHeader>Engagement details</CardHeader>
+            <Stack spacing={3}>
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                  Review level
+                </Typography>
+                <ToggleButtonGroup
+                  exclusive
+                  fullWidth
+                  size="small"
+                  value={scopeDocument?.reviewLevel ?? null}
+                  onChange={(_e, value: ReviewLevel | null) => value && updateScopeDocument({ reviewLevel: value })}
+                >
+                  <ToggleButton value="application" sx={{ textTransform: 'none' }}>
+                    Application-level
+                  </ToggleButton>
+                  <ToggleButton value="organization" sx={{ textTransform: 'none' }}>
+                    Organization-level
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+              <TextField
+                select
+                fullWidth
+                label="Type of application"
+                value={scopeDocument?.applicationType ?? ''}
+                onChange={(e) => updateScopeDocument({ applicationType: e.target.value })}
+                slotProps={{ select: { native: true } }}
+              >
+                <option value="" />
+                {APPLICATION_TYPES.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </TextField>
+              <Autocomplete
+                multiple
+                freeSolo
+                options={COMPLIANCE_OPTIONS}
+                value={scopeDocument?.complianceRequirements ?? []}
+                onChange={(_e, value) => updateScopeDocument({ complianceRequirements: value as string[] })}
+                renderInput={(params) => <TextField {...params} label="Compliance requirements" />}
+              />
+            </Stack>
+          </Paper>
         </Grid>
-      </Paper>
 
-      <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderLeft: '3px solid #86BC25' }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-            Scope description
-          </Typography>
-          <Stack direction="row" spacing={1}>
-            <Button size="small" startIcon={<ContentCopyIcon />} onClick={handleCopy} disabled={!textDraft.trim()}>
-              Copy
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<AutoAwesomeIcon />}
-              onClick={() => setSuggestOpen(true)}
-              disabled={!textDraft.trim()}
-            >
-              Suggest controls
-            </Button>
-          </Stack>
-        </Stack>
-        <TextField
-          fullWidth
-          multiline
-          minRows={6}
-          placeholder="Describe the engagement's scope: systems, applications, environments, and any explicit exclusions..."
-          value={textDraft}
-          onChange={(e) => setTextDraft(e.target.value)}
-          onBlur={handleTextBlur}
-        />
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1.5 }}>
-          <Button size="small" component="label" startIcon={<UploadFileIcon />}>
-            Upload scope document
-            <input type="file" hidden onChange={handleFileInputChange} />
-          </Button>
-          {scopeDocument?.attachmentFileName && (
-            <Chip
-              icon={<DescriptionOutlinedIcon />}
-              label={`${scopeDocument.attachmentFileName} (${formatBytes(scopeDocument.attachmentSizeBytes)})`}
-              onClick={handleDownloadAttachment}
-              onDelete={() => removeScopeDocumentAttachment()}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Paper variant="outlined" sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" rowGap={1} sx={{ mb: 2.5 }}>
+              <CardHeader>Scope description</CardHeader>
+              <Stack direction="row" spacing={1}>
+                <Button size="small" startIcon={<ContentCopyIcon />} onClick={handleCopy} disabled={!textDraft.trim()}>
+                  Copy
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<AutoAwesomeIcon />}
+                  onClick={() => setSuggestOpen(true)}
+                  disabled={!textDraft.trim()}
+                >
+                  Suggest
+                </Button>
+              </Stack>
+            </Stack>
+            <TextField
+              fullWidth
+              multiline
+              minRows={5}
+              sx={{ flex: 1 }}
+              placeholder="Describe the engagement's scope: systems, applications, environments, and any explicit exclusions..."
+              value={textDraft}
+              onChange={(e) => setTextDraft(e.target.value)}
+              onBlur={handleTextBlur}
             />
-          )}
-        </Stack>
-      </Paper>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 2 }}>
+              <Button size="small" component="label" startIcon={<UploadFileIcon />}>
+                Upload scope document
+                <input type="file" hidden onChange={handleFileInputChange} />
+              </Button>
+              {scopeDocument?.attachmentFileName && (
+                <Chip
+                  icon={<DescriptionOutlinedIcon />}
+                  label={`${scopeDocument.attachmentFileName} (${formatBytes(scopeDocument.attachmentSizeBytes)})`}
+                  onClick={handleDownloadAttachment}
+                  onDelete={() => removeScopeDocumentAttachment()}
+                />
+              )}
+            </Stack>
+          </Paper>
+        </Grid>
+      </Grid>
 
       <Tabs
         value={frameworkIndex}
