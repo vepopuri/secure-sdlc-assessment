@@ -153,10 +153,10 @@ export function HomePage() {
         sx={{
           position: 'relative',
           overflow: 'hidden',
-          borderRadius: 3,
-          px: { xs: 3, sm: 6 },
-          py: { xs: 6, sm: 8 },
-          mb: 4,
+          borderRadius: 2,
+          px: { xs: 2.5, sm: 4 },
+          py: { xs: 2.5, sm: 3 },
+          mb: 3,
           textAlign: 'center',
           color: '#282728',
           backgroundImage: 'linear-gradient(135deg, #F3F8EC 0%, #FFFFFF 45%, #E9F6FB 100%)',
@@ -167,10 +167,10 @@ export function HomePage() {
           aria-hidden
           sx={{
             position: 'absolute',
-            top: -80,
-            right: -80,
-            width: 240,
-            height: 240,
+            top: -50,
+            right: -50,
+            width: 140,
+            height: 140,
             borderRadius: '50%',
             border: '1px solid rgba(134,188,37,0.25)',
           }}
@@ -179,10 +179,10 @@ export function HomePage() {
           aria-hidden
           sx={{
             position: 'absolute',
-            bottom: -100,
-            left: -60,
-            width: 220,
-            height: 220,
+            bottom: -60,
+            left: -40,
+            width: 130,
+            height: 130,
             borderRadius: '50%',
             border: '1px solid rgba(0,163,224,0.2)',
           }}
@@ -192,24 +192,21 @@ export function HomePage() {
           sx={{
             position: 'relative',
             fontWeight: 800,
-            lineHeight: 1.15,
-            mb: 2.5,
-            fontSize: { xs: '2rem', sm: '2.75rem', md: '3.25rem' },
+            lineHeight: 1.2,
+            mb: 0.75,
+            fontSize: { xs: '1.4rem', sm: '1.65rem' },
           }}
         >
-          Assess the Maturity of
-          <br />
-          Your Secure <Box component="span" sx={{ color: '#86BC25' }}>SDLC</Box>
+          Assess the Maturity of Your Secure <Box component="span" sx={{ color: '#86BC25' }}>SDLC</Box>
         </Typography>
 
         <Typography
-          variant="h6"
+          variant="body2"
           sx={{
             position: 'relative',
-            maxWidth: 720,
+            maxWidth: 640,
             mx: 'auto',
-            mb: 4,
-            fontWeight: 400,
+            mb: 1.75,
             color: 'rgba(40,39,40,0.7)',
           }}
         >
@@ -217,8 +214,9 @@ export function HomePage() {
           from kickoff through a presentation-ready report.
         </Typography>
 
-        <Stack direction="row" spacing={1.5} justifyContent="center" flexWrap="wrap" rowGap={1.5} sx={{ position: 'relative' }}>
+        <Stack direction="row" spacing={1.25} justifyContent="center" flexWrap="wrap" rowGap={1} sx={{ position: 'relative' }}>
           <Button
+            size="small"
             variant="contained"
             endIcon={<ArrowForwardIcon />}
             sx={{ bgcolor: '#86BC25', '&:hover': { bgcolor: '#75A521' } }}
@@ -227,6 +225,7 @@ export function HomePage() {
             Go to assessment
           </Button>
           <Button
+            size="small"
             variant="outlined"
             sx={{ color: '#282728', borderColor: 'rgba(40,39,40,0.3)' }}
             onClick={() => navigate('/evidence')}
@@ -234,6 +233,7 @@ export function HomePage() {
             Collect evidence
           </Button>
           <Button
+            size="small"
             variant="outlined"
             sx={{ color: '#282728', borderColor: 'rgba(40,39,40,0.3)' }}
             onClick={() => navigate('/reports')}
