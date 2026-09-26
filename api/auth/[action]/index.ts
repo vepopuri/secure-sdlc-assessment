@@ -46,27 +46,22 @@ async function handleSignup(req: VercelRequest, res: VercelResponse) {
   if (existing.length > 0) throw new HttpError(409, 'An account with this email already exists.');
 
   const passwordHash = await hashPassword(password);
+  // Email verification is disabled for now: accounts are marked verified
+  // at signup and signed in immediately. Flip this back to unverified +
+  // createVerificationToken/sendVerificationEmail (see git history) once
+  // Resend is configured and verification should be enforced again.
   const rows = await sql`
-    insert into users (email, password_hash, display_name)
-    values (${email}, ${passwordHash}, ${displayName})
+    insert into users (email, password_hash, display_name, email_verified_at)
+    values (${email}, ${passwordHash}, ${displayName}, now())
     returning id, email, display_name as "displayName"
   `;
   const user = rows[0] as { id: string; email: string; displayName: string };
 
-  // No session is created here on purpose: the account can't be signed
-  // into until the email is verified.
-  const verificationToken = await createVerificationToken(user.id);
-  const { sent, verifyUrl } = await sendVerificationEmail(user.email, verificationToken);
+  const userAgent = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined;
+  const token = await createSession(user.id, userAgent);
+  setSessionCookie(res, token);
 
-  // Email delivery isn't configured yet on this deployment (no
-  // RESEND_API_KEY) -- hand back the verification link directly so signup
-  // still works end-to-end without it. Once RESEND_API_KEY is set, `sent`
-  // is true and this field is omitted.
-  res.status(201).json({
-    status: 'verification-required',
-    email: user.email,
-    ...(sent ? {} : { verifyUrl }),
-  });
+  res.status(201).json({ user });
 }
 
 interface LoginBody {

@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { apiFetch } from '../../services/apiClient';
-import { AuthContext, type AuthStatus, type AuthUser, type SignupResult } from './authContextDefinition';
+import { AuthContext, type AuthStatus, type AuthUser } from './authContextDefinition';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -41,12 +41,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signup = useCallback(async (email: string, password: string, displayName: string) => {
-    // Deliberately does not sign the user in — no session is created until
-    // the email is verified (see verifyEmail below).
-    return apiFetch<SignupResult>('/api/auth/signup', {
+    // Email verification is disabled for now: signup signs the user in
+    // immediately, same as login.
+    const { user: signedUpUser } = await apiFetch<{ user: AuthUser }>('/api/auth/signup', {
       method: 'POST',
       body: JSON.stringify({ email, password, displayName }),
     });
+    setUser(signedUpUser);
+    setStatus('authenticated');
+    return signedUpUser;
   }, []);
 
   const verifyEmail = useCallback(async (token: string) => {
