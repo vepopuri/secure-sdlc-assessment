@@ -182,21 +182,24 @@ function addFrameworkOverviewSlide(pptx: pptxgen, bundle: FrameworkBundle) {
   });
 }
 
+const FUNCTION_PALETTE = [BRAND_BLUE, BRAND_GREEN, '6B5B95', '5A5A5A', BRAND_DARK, BRAND_NEON];
+
 function addTakeawaysSlide(pptx: pptxgen, aggregatedGaps: GapEntry[], strengthCount: number) {
   const slide = addHeaderSlide(pptx, 'Assessment Takeaways');
   slide.addText('Strengths', { x: 0.6, y: 1.2, w: 5.8, h: 0.5, fontFace: FONT, fontSize: 16, bold: true, color: BRAND_GREEN });
   slide.addText(
     strengthCount > 0
-      ? [{ text: `${strengthCount} control(s) are rated Largely or Fully Implemented across in-scope frameworks.`, options: { fontSize: 13 } }]
+      ? [{ text: `✓ ${strengthCount} control(s) are rated Largely or Fully Implemented across in-scope frameworks.`, options: { fontSize: 13 } }]
       : [{ text: 'No controls have reached Largely or Fully Implemented yet.', options: { fontSize: 13 } }],
     { x: 0.6, y: 1.7, w: 5.8, h: 4.8, fontFace: FONT, color: BRAND_DARK, valign: 'top' },
   );
   slide.addText('Opportunity Areas', { x: 6.7, y: 1.2, w: 5.8, h: 0.5, fontFace: FONT, fontSize: 16, bold: true, color: BRAND_BLUE });
   const oppBullets: pptxgen.TextProps[] =
     aggregatedGaps.length > 0
-      ? aggregatedGaps
-          .slice(0, 8)
-          .map((g) => ({ text: `${g.frameworkShortName} ${g.controlCode}: ${g.controlName}`, options: { bullet: true, breakLine: true, fontSize: 12 } }))
+      ? aggregatedGaps.slice(0, 8).map((g) => ({
+          text: `${g.frameworkShortName} ${g.controlCode}: ${g.controlName}`,
+          options: { bullet: { characterCode: '25B8' }, breakLine: true, fontSize: 12 },
+        }))
       : [{ text: 'No significant gaps identified.', options: { fontSize: 13 } }];
   slide.addText(oppBullets, { x: 6.7, y: 1.7, w: 5.8, h: 4.8, fontFace: FONT, color: BRAND_DARK, valign: 'top' });
 }
@@ -212,6 +215,7 @@ function addRadarSlide(pptx: pptxgen, bundle: FrameworkBundle) {
     h: 5.6,
     valAxisMaxVal: 3,
     chartColors: [BRAND_GREEN],
+    radarStyle: 'filled',
     showLegend: false,
   });
   const rows: pptxgen.TableRow[] = [
@@ -219,7 +223,12 @@ function addRadarSlide(pptx: pptxgen, bundle: FrameworkBundle) {
       { text: 'Function', options: { bold: true, color: WHITE, fill: { color: BRAND_DARK } } },
       { text: 'Average', options: { bold: true, color: WHITE, fill: { color: BRAND_DARK } } },
     ],
-    ...bundle.functionScores.map((fs): pptxgen.TableRow => [{ text: fs.name }, { text: `${fs.averageRating.toFixed(1)} / 3` }]),
+    ...bundle.functionScores.map(
+      (fs, i): pptxgen.TableRow => [
+        { text: fs.name, options: { bold: true, color: FUNCTION_PALETTE[i % FUNCTION_PALETTE.length] } },
+        { text: `${fs.averageRating.toFixed(1)} / 3` },
+      ],
+    ),
   ];
   slide.addTable(rows, { x: 8.6, y: 1.3, w: 4.1, fontFace: FONT, fontSize: 10, colW: [2.7, 1.4] });
 }
@@ -363,7 +372,44 @@ function addInitiativeCardSlides(pptx: pptxgen, roadmap: RoadmapItem[]) {
   }
 }
 
-function addDetailedDomainSlides(pptx: pptxgen, detailedGroups: DetailedObservationGroup[]) {
+const RATING_BADGE_COLOR: Record<MaturityRating, string> = {
+  0: 'C97B3D',
+  1: 'D9A521',
+  2: BRAND_BLUE,
+  3: BRAND_GREEN,
+};
+
+/** A compact 4-level scale strip (our real 0-3 labels), the current level highlighted, in the spirit of a maturity ladder legend. */
+function addMaturityScaleStrip(pptx: pptxgen, slide: pptxgen.Slide, x: number, y: number, w: number, h: number, current: MaturityRating | null) {
+  const ratings: MaturityRating[] = [3, 2, 1, 0];
+  const rowH = h / ratings.length;
+  ratings.forEach((r, i) => {
+    const isCurrent = r === current;
+    slide.addShape(pptx.ShapeType.rect, {
+      x,
+      y: y + i * rowH,
+      w,
+      h: rowH - 0.04,
+      fill: { color: isCurrent ? RATING_BADGE_COLOR[r] : 'F0F0F0' },
+    });
+    slide.addText(`${r}: ${MATURITY_LABELS[r]}`, {
+      x: x + 0.08,
+      y: y + i * rowH,
+      w: w - 0.16,
+      h: rowH - 0.04,
+      fontFace: FONT,
+      fontSize: 9,
+      bold: isCurrent,
+      color: isCurrent ? WHITE : '666666',
+      valign: 'middle',
+    });
+  });
+}
+
+function addDetailedDomainSlides(pptx: pptxgen, detailedGroups: DetailedObservationGroup[], roadmap: RoadmapItem[]) {
+  const recommendationByKey = new Map<string, string>();
+  for (const item of roadmap) recommendationByKey.set(`${item.frameworkShortName}:${item.controlCode}`, item.recommendation);
+
   for (const group of detailedGroups) {
     const assessed = group.entries.filter((e) => e.ratingLabel !== 'Not yet rated' || e.notes.trim() || e.evidenceTitles.length > 0);
     if (assessed.length === 0) continue;
@@ -372,21 +418,46 @@ function addDetailedDomainSlides(pptx: pptxgen, detailedGroups: DetailedObservat
 
     for (const entry of assessed) {
       const slide = addHeaderSlide(pptx, `${group.frameworkShortName}: ${entry.code}`);
-      slide.addText(entry.name, { x: 0.6, y: 1.1, w: 9.5, h: 0.5, fontFace: FONT, fontSize: 18, bold: true, color: BRAND_DARK });
-      const ratingNum = /^(\d)/.exec(entry.ratingLabel)?.[1];
-      slide.addShape(pptx.ShapeType.roundRect, { x: 10.6, y: 1.05, w: 2.1, h: 0.65, fill: { color: BRAND_GREEN }, rectRadius: 0.08 });
-      slide.addText(ratingNum ? `${ratingNum} / 3` : 'N/R', { x: 10.6, y: 1.05, w: 2.1, h: 0.65, fontFace: FONT, fontSize: 18, bold: true, color: WHITE, valign: 'middle', align: 'center' });
-      slide.addText(
-        [
-          { text: 'Question asked: ', options: { bold: true, fontSize: 13 } },
-          { text: `${entry.question}\n`, options: { fontSize: 13 } },
-          { text: 'Observations: ', options: { bold: true, fontSize: 13 } },
-          { text: `${entry.notes || 'No observations recorded.'}\n`, options: { fontSize: 13 } },
-          { text: 'Evidence: ', options: { bold: true, fontSize: 13 } },
-          { text: entry.evidenceTitles.length > 0 ? entry.evidenceTitles.join(', ') : 'No evidence linked yet.', options: { fontSize: 13 } },
-        ],
-        { x: 0.6, y: 1.9, w: 12.1, h: 4.8, fontFace: FONT, color: BRAND_DARK, valign: 'top', lineSpacingMultiple: 1.25 },
-      );
+      slide.addText(entry.name, { x: 2.4, y: 1.1, w: 7.7, h: 0.5, fontFace: FONT, fontSize: 18, bold: true, color: BRAND_DARK });
+      const ratingMatch = /^(\d)/.exec(entry.ratingLabel)?.[1];
+      const ratingNum = ratingMatch ? (Number(ratingMatch) as MaturityRating) : null;
+      slide.addShape(pptx.ShapeType.roundRect, {
+        x: 10.4,
+        y: 1.05,
+        w: 2.3,
+        h: 0.65,
+        fill: { color: ratingNum !== null ? RATING_BADGE_COLOR[ratingNum] : '9AA0A6' },
+        rectRadius: 0.08,
+      });
+      slide.addText(ratingNum !== null ? `${ratingNum} / 3` : 'N/R', {
+        x: 10.4,
+        y: 1.05,
+        w: 2.3,
+        h: 0.65,
+        fontFace: FONT,
+        fontSize: 18,
+        bold: true,
+        color: WHITE,
+        valign: 'middle',
+        align: 'center',
+      });
+
+      addMaturityScaleStrip(pptx, slide, 0.6, 1.05, 1.6, 5.9, ratingNum);
+
+      const recommendation = recommendationByKey.get(`${group.frameworkShortName}:${entry.code}`);
+      const textRuns: pptxgen.TextProps[] = [
+        { text: 'Question asked: ', options: { bold: true, fontSize: 13 } },
+        { text: `${entry.question}\n`, options: { fontSize: 13 } },
+        { text: 'Observations: ', options: { bold: true, fontSize: 13 } },
+        { text: `${entry.notes || 'No observations recorded.'}\n`, options: { fontSize: 13 } },
+        { text: 'Evidence: ', options: { bold: true, fontSize: 13 } },
+        { text: `${entry.evidenceTitles.length > 0 ? entry.evidenceTitles.join(', ') : 'No evidence linked yet.'}\n`, options: { fontSize: 13 } },
+      ];
+      if (recommendation) {
+        textRuns.push({ text: 'Recommendation: ', options: { bold: true, fontSize: 13, color: BRAND_BLUE } });
+        textRuns.push({ text: recommendation, options: { fontSize: 13 } });
+      }
+      slide.addText(textRuns, { x: 2.4, y: 1.9, w: 10.3, h: 5, fontFace: FONT, color: BRAND_DARK, valign: 'top', lineSpacingMultiple: 1.25 });
     }
   }
 }
@@ -395,13 +466,24 @@ function addAppendixSlides(pptx: pptxgen, evidence: Evidence[]) {
   addSectionDivider(pptx, 'Appendix', 'Maturity scale, documentation reviewed, and interviews conducted');
 
   const scaleSlide = addHeaderSlide(pptx, 'Maturity Ratings');
-  const ratings: MaturityRating[] = [0, 1, 2, 3];
+  const ratings: MaturityRating[] = [3, 2, 1, 0];
+  const RATING_DESCRIPTION: Record<MaturityRating, string> = {
+    3: 'The practice is fully in place, consistently followed, and supported by evidence.',
+    2: 'The practice is largely in place, with minor gaps in consistency or coverage.',
+    1: 'The practice exists in part, informally, or on an ad hoc basis.',
+    0: 'The practice is not yet in place, or no evidence has been reviewed for it.',
+  };
   const rows: pptxgen.TableRow[] = [
     [
       { text: 'Rating', options: { bold: true, color: WHITE, fill: { color: BRAND_DARK } } },
       { text: 'Definition', options: { bold: true, color: WHITE, fill: { color: BRAND_DARK } } },
     ],
-    ...ratings.map((r): pptxgen.TableRow => [{ text: `${r}: ${MATURITY_LABELS[r]}` }, { text: '' }]),
+    ...ratings.map(
+      (r): pptxgen.TableRow => [
+        { text: `${r}: ${MATURITY_LABELS[r]}`, options: { bold: true, color: WHITE, fill: { color: RATING_BADGE_COLOR[r] } } },
+        { text: RATING_DESCRIPTION[r] },
+      ],
+    ),
   ];
   scaleSlide.addTable(rows, { x: 0.6, y: 1.3, w: 12.1, fontFace: FONT, fontSize: 13, colW: [4, 8.1] });
 
@@ -490,7 +572,7 @@ export async function exportEngagementPptx(params: {
 
   if (options.domainsDetailed) {
     addSectionDivider(pptx, 'Program Domains', 'Detailed assessment report');
-    addDetailedDomainSlides(pptx, detailedGroups);
+    addDetailedDomainSlides(pptx, detailedGroups, roadmap);
   }
 
   if (options.appendix) {

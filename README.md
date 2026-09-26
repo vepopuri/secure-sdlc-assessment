@@ -253,12 +253,19 @@ a reviewer explicitly typed in):
   lanes × Now/Next/Later columns, colored bars per gap control, capped
   per cell with "+N more"), plus initiative card slides grouped by phase.
 - **Program domains detailed assessment report** — one slide per control
-  that has a rating, observations, or linked evidence (question asked,
-  observations, evidence, a colored maturity badge), grouped behind a
+  that has a rating, observations, or linked evidence: a compact 4-level
+  maturity scale strip (this app's own 0 to 3 labels, current level
+  highlighted, in the spirit of a maturity ladder legend) next to the
+  question asked, observations, evidence, a rating-colored maturity badge
+  (amber/gold for 0 to 1, blue for 2, green for 3), and a recommendation
+  line when the control is an open gap (reusing the same recommendation
+  text as the roadmap, never a separate invented one). Grouped behind a
   divider slide per framework, so an unstarted assessment doesn't produce
   dozens of blank slides.
-- **Appendix** — the maturity rating scale, a Documentation Reviewed
-  register, and an Interviews Conducted register, both built from the
+- **Appendix** — the maturity rating scale (color-coded to match the
+  badges above, with this app's own honest definition of each level, not
+  a borrowed external scale), a Documentation Reviewed register, and an
+  Interviews Conducted register, both built from the
   Evidence Library (`buildDocumentationReviewed`/`buildInterviewsReviewed`)
   using the same `REF-###` numbers shown there (`utils/evidenceSerial.ts`).
 
