@@ -48,14 +48,32 @@ import type { PptxExportOptions } from '../utils/pptxExport';
 
 const ROADMAP_PHASES: RoadmapPhase[] = ['Now (0 to 30 days)', 'Next (31 to 90 days)', 'Later (90+ days)'];
 
-const PPTX_OPTION_LABELS: { key: keyof PptxExportOptions; label: string }[] = [
-  { key: 'scope', label: 'Scope and objectives' },
-  { key: 'executiveSummary', label: 'Executive summary' },
-  { key: 'initiatives', label: 'Key initiatives' },
-  { key: 'observationsGaps', label: 'Key observations and gaps' },
-  { key: 'maturityIndustry', label: 'Maturity score vs. industry' },
-  { key: 'roadmap', label: 'Roadmap' },
-  { key: 'detailedDomains', label: 'Detailed domain slides (one per assessed control)' },
+const PPTX_OPTION_LABELS: { key: keyof PptxExportOptions; label: string; hint: string }[] = [
+  {
+    key: 'executiveSummary',
+    label: 'Executive summary',
+    hint: 'Scope and objectives, assessment framework, executive summary, takeaways, maturity by function, and industry benchmark.',
+  },
+  {
+    key: 'assessmentOverview',
+    label: 'Assessment overview',
+    hint: 'Strengths and opportunity areas for every function, in each in-scope framework.',
+  },
+  {
+    key: 'roadmapInitiatives',
+    label: 'Roadmap and initiatives',
+    hint: 'A Now/Next/Later swimlane per framework, plus initiative cards.',
+  },
+  {
+    key: 'domainsDetailed',
+    label: 'Program domains detailed assessment report',
+    hint: 'One slide per assessed control: question asked, observations, and evidence.',
+  },
+  {
+    key: 'appendix',
+    label: 'Appendix',
+    hint: 'Maturity scale, documentation reviewed, and interviews conducted (from the Evidence Library).',
+  },
 ];
 
 export function ReportsPage() {
@@ -78,6 +96,12 @@ export function ReportsPage() {
   const gaps = topGaps(framework, observations);
 
   const frameworkScores = scopedFrameworks.map((f) => scoreFramework(f, observations));
+  const frameworkBundles = scopedFrameworks.map((f, i) => ({
+    framework: f,
+    functionScores: frameworkScores[i].functionScores,
+    observations,
+    gaps: topGaps(f, observations),
+  }));
   const aggregatedGaps = aggregateTopGaps(scopedFrameworks, observations, 10);
   const executiveSummary = buildExecutiveSummary({ frameworkScores, gaps: aggregatedGaps, story });
   const roadmap = buildRoadmap(aggregatedGaps);
@@ -138,9 +162,11 @@ export function ReportsPage() {
         scopeDocument,
         executiveSummary,
         peerRows,
-        gaps: aggregatedGaps,
+        aggregatedGaps,
         roadmap,
         detailedGroups: scopedFrameworks.map(buildDetailedGroup),
+        frameworkBundles,
+        evidence,
       });
       setPptxDialogOpen(false);
     } finally {
@@ -185,12 +211,15 @@ export function ReportsPage() {
           multiline
           minRows={2}
           className="no-print"
-          label="Add context for the executive summary (optional)"
+          label="Add your own context for the executive summary (optional)"
           placeholder="e.g. Frame this for the audit committee ahead of next quarter's board review."
           value={story}
           onChange={(e) => setStory(e.target.value)}
-          sx={{ mb: 2 }}
+          sx={{ mb: 0.5 }}
         />
+        <Typography variant="caption" color="text.secondary" className="no-print" sx={{ display: 'block', mb: 2 }}>
+          This text is inserted into the summary exactly as typed. There is no AI rewriting it.
+        </Typography>
         <Typography variant="body2">{executiveSummary}</Typography>
       </Paper>
 
@@ -460,24 +489,36 @@ export function ReportsPage() {
         </Alert>
       </Snackbar>
 
-      <Dialog open={pptxDialogOpen} onClose={() => setPptxDialogOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog open={pptxDialogOpen} onClose={() => setPptxDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Export as PowerPoint</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            Choose which slides to include. The deck is generated entirely in your browser from the
-            same data shown above.
+            Choose which sections to include. The deck is generated entirely in your browser, from the
+            same data shown above, following a standard SSDLC assessment report structure (cover,
+            contents, then the sections below).
           </Typography>
-          <Stack>
+          <Stack spacing={1}>
             {PPTX_OPTION_LABELS.map((opt) => (
               <FormControlLabel
                 key={opt.key}
+                sx={{ alignItems: 'flex-start' }}
                 control={
                   <Checkbox
+                    sx={{ mt: -0.5 }}
                     checked={pptxOptions[opt.key]}
                     onChange={(e) => setPptxOptions((prev) => ({ ...prev, [opt.key]: e.target.checked }))}
                   />
                 }
-                label={<Typography variant="body2">{opt.label}</Typography>}
+                label={
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {opt.label}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {opt.hint}
+                    </Typography>
+                  </Box>
+                }
               />
             ))}
           </Stack>

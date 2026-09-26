@@ -14,6 +14,7 @@ import { useAppData } from '../context/useAppData';
 import { UploadEvidenceDialog } from '../components/evidence/UploadEvidenceDialog';
 import { EvidencePreviewDialog } from '../components/evidence/EvidencePreviewDialog';
 import { formatBytes } from '../utils/formatBytes';
+import { computeEvidenceSerials, formatSerial } from '../utils/evidenceSerial';
 
 const KIND_ICONS: Record<EvidenceKind, React.ElementType> = {
   document: DescriptionOutlinedIcon,
@@ -71,20 +72,13 @@ const SECTIONS: SectionDef[] = [
   },
 ];
 
-function serialLabel(n: number): string {
-  return `REF-${String(n).padStart(3, '0')}`;
-}
-
 export function EvidencePage() {
   const { evidence, removeEvidence, loading } = useAppData();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadTab, setUploadTab] = useState<'file' | 'note' | 'general'>('file');
   const [previewItem, setPreviewItem] = useState<Evidence | null>(null);
 
-  const serials = new Map<string, number>();
-  [...evidence]
-    .sort((a, b) => a.addedAt.localeCompare(b.addedAt))
-    .forEach((item, i) => serials.set(item.id, i + 1));
+  const serials = computeEvidenceSerials(evidence);
 
   function openUpload(tab: 'file' | 'note' | 'general') {
     setUploadTab(tab);
@@ -184,7 +178,7 @@ export function EvidencePage() {
                             <Chip
                               size="small"
                               variant="outlined"
-                              label={serialLabel(serials.get(item.id) ?? 0)}
+                              label={formatSerial(serials.get(item.id) ?? 0)}
                               sx={{ fontFamily: 'monospace', fontSize: 11 }}
                             />
                           </Stack>

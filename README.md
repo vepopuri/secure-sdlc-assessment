@@ -229,19 +229,43 @@ the nav bar in `Layout.tsx` and to the story box, peer inputs, and tabs in
 `ReportsPage.tsx`) hides everything that isn't part of the report itself
 in the printed output.
 
-### PowerPoint export (`src/utils/pptxExport.ts`)
+### PowerPoint export (`src/utils/pptxExport.ts`, `src/utils/reportSections.ts`)
 
-"Export as PowerPoint" opens a checklist (Scope and objectives, Executive
-summary, Key initiatives, Key observations and gaps, Maturity vs.
-industry, Roadmap, Detailed domain slides) and generates a real `.pptx`
-entirely client-side with `pptxgenjs` (no backend, no template file) from
-the same computed report data as the on-screen report and the text
-export, styled with the app's own Deloitte palette (dark cover slide,
-green/blue accents, a bar chart for the peer comparison when a benchmark
-is set). Detailed domain slides are capped to controls that actually have
-a rating, observations, or linked evidence, one slide per control, grouped
-behind a divider slide per framework, so an unstarted assessment doesn't
-produce dozens of blank slides.
+"Export as PowerPoint" opens a checklist of five sections (matching a
+standard consulting SSDLC assessment report's table of contents) and
+generates a real `.pptx` entirely client-side with `pptxgenjs` (no
+backend, no template file, no client names/logos/photography — every
+slide is generic and built only from this engagement's own data or data
+a reviewer explicitly typed in):
+
+- **Executive summary** — scope and objectives, an assessment framework
+  grid per in-scope framework (function → its controls), the executive
+  summary paragraph, a strengths/opportunities takeaway slide, a radar
+  chart of average maturity by function per framework (`buildRadarData`,
+  skipped for a framework with fewer than 3 functions), and maturity vs. a
+  reviewer-entered industry benchmark (a real bar chart once a benchmark
+  is set, else a table).
+- **Assessment overview** — one slide per function per framework
+  (`buildFunctionObservations`), splitting its controls into Strengths
+  (rating ≥ 2) and Opportunity Areas (unrated or ≤ 1), each with its
+  observation text.
+- **Roadmap and initiatives** — a swimlane slide per framework (function
+  lanes × Now/Next/Later columns, colored bars per gap control, capped
+  per cell with "+N more"), plus initiative card slides grouped by phase.
+- **Program domains detailed assessment report** — one slide per control
+  that has a rating, observations, or linked evidence (question asked,
+  observations, evidence, a colored maturity badge), grouped behind a
+  divider slide per framework, so an unstarted assessment doesn't produce
+  dozens of blank slides.
+- **Appendix** — the maturity rating scale, a Documentation Reviewed
+  register, and an Interviews Conducted register, both built from the
+  Evidence Library (`buildDocumentationReviewed`/`buildInterviewsReviewed`)
+  using the same `REF-###` numbers shown there (`utils/evidenceSerial.ts`).
+
+Every slide type was verified by generating a real deck against live
+assessment data and parsing it back with `python-pptx` (a strict,
+independent OOXML parser, separate from pptxgenjs itself) to confirm
+every shape, table, and embedded chart is well-formed.
 
 ### Custom framework (`src/utils/customFramework.ts`, `customFrameworkService.ts`, `CustomFrameworkDialog.tsx`)
 
