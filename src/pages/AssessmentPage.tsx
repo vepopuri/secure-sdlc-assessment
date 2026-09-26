@@ -256,7 +256,7 @@ export function AssessmentPage() {
                             <StatusIcon fontSize="small" sx={{ color: STATUS_COLORS[status] }} />
                           </ListItemIcon>
                           <ListItemText
-                            primary={`${control.code} — ${control.name}`}
+                            primary={`${control.code}: ${control.name}`}
                             slotProps={{ primary: { variant: 'body2' } }}
                           />
                         </ListItemButton>

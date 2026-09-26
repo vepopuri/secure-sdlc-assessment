@@ -119,7 +119,7 @@ export function SuggestControlsDialog({
           <Typography variant="body2" color="text.secondary">
             Suggestions come from keywords in your scope description. Uncheck anything that
             doesn&apos;t apply, and use &quot;Add other controls&quot; to bring in anything the
-            keyword match missed — nothing is added to scope until you finalize.
+            keyword match missed. Nothing is added to scope until you finalize.
           </Typography>
 
           {suggestionsForActive.length > 0 ? (
@@ -137,7 +137,7 @@ export function SuggestControlsDialog({
                     label={
                       <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                         <Typography variant="body2">
-                          {s.code} — {s.name}
+                          {s.code}: {s.name}
                         </Typography>
                         <Chip size="small" variant="outlined" label={s.matchedKeywords.slice(0, 3).join(', ')} />
                       </Stack>
@@ -162,7 +162,7 @@ export function SuggestControlsDialog({
               multiple
               options={addableOptions}
               value={manuallyAddedForActive}
-              getOptionLabel={(c) => `${c.code} — ${c.name}`}
+              getOptionLabel={(c) => `${c.code}: ${c.name}`}
               onChange={(_e, values) => handleAddableChange(values)}
               renderInput={(params) => (
                 <TextField {...params} placeholder={`Browse the full ${activeFramework.shortName} catalog...`} />

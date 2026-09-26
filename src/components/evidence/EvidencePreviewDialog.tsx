@@ -63,7 +63,7 @@ export function EvidencePreviewDialog({ evidence, onClose }: { evidence: Evidenc
             />
           ) : (
             <Typography variant="body2" color="text.secondary">
-              {evidence.fileName} ({evidence.mimeType}) — preview not available for this file type.
+              {evidence.fileName} ({evidence.mimeType}): preview not available for this file type.
             </Typography>
           )}
 

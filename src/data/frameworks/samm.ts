@@ -235,7 +235,7 @@ export const sammFramework: Framework = {
             'Store secrets in a dedicated vault, rotate them regularly, and never commit them to source control.',
           question: 'How are secrets (API keys, credentials) managed across build and deployment?',
           sampleAnswer:
-            'All secrets are stored in a central vault, injected at runtime, rotated every 90 days, and never committed to source control — enforced by pre-commit scanning.',
+            'All secrets are stored in a central vault, injected at runtime, rotated every 90 days, and never committed to source control, enforced by pre-commit scanning.',
         },
         {
           id: 'samm-dm-a',

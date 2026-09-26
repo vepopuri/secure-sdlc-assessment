@@ -88,7 +88,7 @@ export function ReportsPage() {
                 <TableRow key={gap.controlId}>
                   <TableCell>{gap.functionCode}</TableCell>
                   <TableCell>
-                    {gap.controlCode} — {gap.controlName}
+                    {gap.controlCode}: {gap.controlName}
                   </TableCell>
                   <TableCell align="right">
                     {gap.rating === null ? (
@@ -103,7 +103,7 @@ export function ReportsPage() {
                 <TableRow>
                   <TableCell colSpan={3} align="center">
                     <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                      No gaps — every control is rated above the threshold.
+                      No gaps. Every control is rated above the threshold.
                     </Typography>
                   </TableCell>
                 </TableRow>

@@ -69,7 +69,7 @@ export const ssdfFramework: Framework = {
           question:
             'What criteria must software meet at each stage before it can progress (e.g., merge, release)?',
           sampleAnswer:
-            'Each SDLC gate (PR merge, release candidate, production deploy) has documented pass/fail criteria — e.g., zero critical static-analysis findings, signed artifact — enforced automatically in the pipeline.',
+            'Each SDLC gate (PR merge, release candidate, production deploy) has documented pass/fail criteria (e.g., zero critical static-analysis findings, signed artifact), enforced automatically in the pipeline.',
         },
         {
           id: 'ssdf-po-5',

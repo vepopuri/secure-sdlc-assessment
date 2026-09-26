@@ -244,10 +244,10 @@ export function HomePage() {
           variant="body1"
           sx={{ maxWidth: 640, mx: 'auto', mb: 3, color: 'rgba(255,255,255,0.8)' }}
         >
-          A single, structured workspace for running secure software development lifecycle
-          assessments, from kickoff through final report. Scope the engagement, collect evidence,
-          interview stakeholders, and score maturity consistently across OWASP SAMM, NIST CSF, and
-          NIST SSDF &mdash; so findings are comparable, defensible, and ready to present.
+          A single workspace for running secure software development lifecycle assessments, from
+          kickoff through final report. Scope the engagement, collect evidence, interview
+          stakeholders, and score maturity across OWASP SAMM, NIST CSF, and NIST SSDF. Findings
+          stay comparable, defensible, and ready to present.
         </Typography>
 
         <Stack direction="row" spacing={1.5} justifyContent="center">
@@ -273,7 +273,7 @@ export function HomePage() {
         Where would you like to start?
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Jump straight into any part of the engagement — pick up wherever makes sense for you.
+        Jump straight into any part of the engagement, wherever makes sense for you.
       </Typography>
 
       <Grid container spacing={2} sx={{ mb: 4 }}>
@@ -495,7 +495,7 @@ export function HomePage() {
                         }
                         label={
                           <Typography variant="body2">
-                            {control.code} — {control.name}
+                            {control.code}: {control.name}
                           </Typography>
                         }
                       />
