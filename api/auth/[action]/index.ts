@@ -5,7 +5,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const action = req.query.action;
   if (action === 'session') {
     res.status(200).json({
-      debug: 'node20-pinned-getsql-import',
+      debug: 'postgresjs-getsql-import',
       nodeVersion: process.version,
       hasSql: typeof getSql === 'function',
     });

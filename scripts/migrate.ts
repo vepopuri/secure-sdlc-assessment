@@ -7,7 +7,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Client } from 'pg';
+import postgres from 'postgres';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = join(__dirname, '..', 'db', 'migrations');
@@ -20,19 +20,18 @@ async function main() {
     return;
   }
 
-  const client = new Client({ connectionString });
-  await client.connect();
+  const sql = postgres(connectionString, { ssl: 'require' });
 
   try {
-    await client.query(`
+    await sql`
       create table if not exists schema_migrations (
         filename text primary key,
         applied_at timestamptz not null default now()
       )
-    `);
+    `;
 
-    const appliedResult = await client.query<{ filename: string }>('select filename from schema_migrations');
-    const applied = new Set(appliedResult.rows.map((r) => r.filename));
+    const appliedResult = await sql<{ filename: string }[]>`select filename from schema_migrations`;
+    const applied = new Set(appliedResult.map((r) => r.filename));
 
     const files = readdirSync(MIGRATIONS_DIR)
       .filter((f) => f.endsWith('.sql'))
@@ -45,20 +44,15 @@ async function main() {
       }
       const sqlText = readFileSync(join(MIGRATIONS_DIR, file), 'utf8');
       console.log(`apply ${file}`);
-      await client.query('begin');
-      try {
-        await client.query(sqlText);
-        await client.query('insert into schema_migrations (filename) values ($1)', [file]);
-        await client.query('commit');
-      } catch (err) {
-        await client.query('rollback');
-        throw err;
-      }
+      await sql.begin(async (tx) => {
+        await tx.unsafe(sqlText);
+        await tx`insert into schema_migrations (filename) values (${file})`;
+      });
     }
 
     console.log('Migrations up to date.');
   } finally {
-    await client.end();
+    await sql.end();
   }
 }
 
