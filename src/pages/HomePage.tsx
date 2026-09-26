@@ -23,7 +23,10 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useAppData } from '../context/useAppData';
 import { formatBytes } from '../utils/formatBytes';
 import { SuggestControlsDialog } from '../components/scope/SuggestControlsDialog';
+import { frameworks, allControlIds } from '../data/frameworks';
 import type { ReviewLevel } from '../types';
+
+const FRAMEWORK_COLORS = ['#86BC25', '#00A3E0', '#86BC25'];
 
 const APPLICATION_TYPES = [
   'Web Application',
@@ -241,6 +244,57 @@ export function HomePage() {
             View reports
           </Button>
         </Stack>
+      </Box>
+
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
+          Assessment frameworks
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Every engagement scores maturity against these industry frameworks, side by side.
+        </Typography>
+        <Grid container spacing={2}>
+          {frameworks.map((f, i) => {
+            const color = FRAMEWORK_COLORS[i % FRAMEWORK_COLORS.length];
+            return (
+              <Grid key={f.id} size={{ xs: 12, sm: 4 }}>
+                <Paper
+                  variant="outlined"
+                  onClick={() => navigate('/assessment')}
+                  sx={{
+                    p: 2.5,
+                    height: '100%',
+                    cursor: 'pointer',
+                    transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: '0 8px 20px rgba(0,0,0,0.1)',
+                      borderColor: color,
+                    },
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                      {f.shortName} <Box component="span" sx={{ fontWeight: 400, color: 'text.secondary' }}>{f.version}</Box>
+                    </Typography>
+                  </Stack>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                    {f.description}
+                  </Typography>
+                  <Stack direction="row" spacing={2}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color }}>
+                      {f.functions.length} functions
+                    </Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color }}>
+                      {allControlIds(f).length} controls
+                    </Typography>
+                  </Stack>
+                </Paper>
+              </Grid>
+            );
+          })}
+        </Grid>
       </Box>
 
       <Grid id="scope-section" container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
