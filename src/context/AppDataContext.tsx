@@ -91,11 +91,26 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return saved;
   }, []);
 
-  const setScopeDocumentText = useCallback(async (text: string) => {
-    const saved = await scopeService.setDocument(text);
+  const updateScopeDocument = useCallback(async (partial: Partial<Omit<ScopeDocument, 'id'>>) => {
+    const saved = await scopeService.updateDocument(partial);
     setScopeDocument(saved);
     return saved;
   }, []);
+
+  const setScopeDocumentAttachment = useCallback(async (file: File) => {
+    const saved = await scopeService.setDocumentAttachment(file);
+    setScopeDocument(saved);
+    return saved;
+  }, []);
+
+  const removeScopeDocumentAttachment = useCallback(async () => {
+    const saved = await scopeService.removeDocumentAttachment();
+    setScopeDocument(saved);
+    return saved;
+  }, []);
+
+  const getScopeDocumentAttachmentUrl = useCallback(async () => scopeService.getDocumentAttachmentUrl(), []);
+  const readScopeDocumentAttachmentText = useCallback(async () => scopeService.readDocumentAttachmentText(), []);
 
   const value = useMemo<AppDataContextValue>(
     () => ({
@@ -111,7 +126,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       upsertObservation,
       getObservation,
       setScopeIncluded,
-      setScopeDocumentText,
+      updateScopeDocument,
+      setScopeDocumentAttachment,
+      removeScopeDocumentAttachment,
+      getScopeDocumentAttachmentUrl,
+      readScopeDocumentAttachmentText,
     }),
     [
       evidence,
@@ -126,7 +145,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       upsertObservation,
       getObservation,
       setScopeIncluded,
-      setScopeDocumentText,
+      updateScopeDocument,
+      setScopeDocumentAttachment,
+      removeScopeDocumentAttachment,
+      getScopeDocumentAttachmentUrl,
+      readScopeDocumentAttachmentText,
     ],
   );
 

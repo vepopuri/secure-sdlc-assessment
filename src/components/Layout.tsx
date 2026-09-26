@@ -2,8 +2,7 @@ import { AppBar, Box, Container, Tab, Tabs, Toolbar, Typography } from '@mui/mat
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 const NAV_ITEMS = [
-  { label: 'Dashboard', path: '/' },
-  { label: 'Scope', path: '/scope' },
+  { label: 'Home', path: '/' },
   { label: 'Assessment', path: '/assessment' },
   { label: 'Evidence Library', path: '/evidence' },
   { label: 'Reports', path: '/reports' },

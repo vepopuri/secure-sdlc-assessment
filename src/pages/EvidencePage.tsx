@@ -21,6 +21,7 @@ import type { Evidence, EvidenceKind } from '../types';
 import { useAppData } from '../context/useAppData';
 import { UploadEvidenceDialog } from '../components/evidence/UploadEvidenceDialog';
 import { EvidencePreviewDialog } from '../components/evidence/EvidencePreviewDialog';
+import { formatBytes } from '../utils/formatBytes';
 
 const KIND_ICONS: Record<EvidenceKind, React.ElementType> = {
   document: DescriptionOutlinedIcon,
@@ -28,13 +29,6 @@ const KIND_ICONS: Record<EvidenceKind, React.ElementType> = {
   'interview-note': ChatBubbleOutlineIcon,
   other: InsertDriveFileOutlinedIcon,
 };
-
-function formatBytes(bytes?: number): string {
-  if (!bytes) return '';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export function EvidencePage() {
   const { evidence, removeEvidence, loading } = useAppData();

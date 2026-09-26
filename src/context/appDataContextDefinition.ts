@@ -20,7 +20,11 @@ export interface AppDataContextValue {
   upsertObservation: (input: UpsertObservationInput) => Promise<Observation>;
   getObservation: (frameworkId: string, controlId: string) => Observation | undefined;
   setScopeIncluded: (frameworkId: string, includedControlIds: string[]) => Promise<ScopeSelection>;
-  setScopeDocumentText: (text: string) => Promise<ScopeDocument>;
+  updateScopeDocument: (partial: Partial<Omit<ScopeDocument, 'id'>>) => Promise<ScopeDocument>;
+  setScopeDocumentAttachment: (file: File) => Promise<ScopeDocument>;
+  removeScopeDocumentAttachment: () => Promise<ScopeDocument>;
+  getScopeDocumentAttachmentUrl: () => Promise<string | undefined>;
+  readScopeDocumentAttachmentText: () => Promise<string | undefined>;
 }
 
 export const AppDataContext = createContext<AppDataContextValue | undefined>(undefined);

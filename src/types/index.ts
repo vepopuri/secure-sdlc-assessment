@@ -81,15 +81,24 @@ export interface ScopeSelection {
   includedControlIds: string[];
 }
 
+export type ReviewLevel = 'application' | 'organization';
+
 /**
- * The free-text description of the engagement's scope — what's being
- * assessed, boundaries, exclusions. Independent of the per-control
- * ScopeSelection checklist: it's reference material a reviewer can write
- * once, copy elsewhere, and consult later, and it can suggest which controls
- * to include rather than requiring them to be picked by hand.
+ * The engagement's intake profile plus its free-text scope description —
+ * what's being assessed, boundaries, exclusions, and (optionally) an
+ * uploaded scope document. Independent of the per-control ScopeSelection
+ * checklist: it's reference material a reviewer can write once, copy
+ * elsewhere, and consult later, and it can suggest which controls to
+ * include rather than requiring them to be picked by hand.
  */
 export interface ScopeDocument {
   id: 'engagement-scope';
+  reviewLevel: ReviewLevel | null;
+  applicationType: string;
+  complianceRequirements: string[];
   text: string;
+  attachmentFileName?: string;
+  attachmentMimeType?: string;
+  attachmentSizeBytes?: number;
   updatedAt: string; // ISO timestamp
 }

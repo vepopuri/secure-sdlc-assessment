@@ -32,18 +32,22 @@ for evidence file bytes). Clearing site data resets the app.
 
 ## Pages
 
-- **Dashboard** (`/`) — the landing page: a hero banner, then stat tiles
-  (frameworks, controls assessed, evidence items, overall weighted average
-  maturity) plus a score card per framework with a maturity-by-function bar
-  chart. All figures respect the current assessment scope (see below).
-- **Scope** (`/scope`) — write (and copy) a free-text engagement scope
-  document as the primary artifact: what's being assessed, boundaries,
-  exclusions. It's reference material, not a checklist — nothing about it is
-  required to start assessing. Optionally run "Suggest controls" to get a
-  keyword-based shortlist of controls the document seems to mention, or
-  fine-tune the per-control checklist yourself in a collapsed, secondary
-  section (every control is in scope by default; deselect what doesn't
-  apply and add it back at any time).
+- **Home** (`/`) — the landing page and engagement setup in one place. A
+  dark, professional header (no scoring here — that lives on Reports)
+  above:
+  - **Engagement details** — review level (application-level vs.
+    organization-level), type of application, and compliance requirements
+    (PCI DSS, HIPAA, SOC 2, …), all autosaved as they're set.
+  - **Scope description** — a free-text engagement scope document you can
+    write directly or fill from an **uploaded file** (a plain-text/Markdown
+    upload auto-fills the description if it's empty; any file type can be
+    attached, downloaded, and removed). Copy it to the clipboard, or run
+    "Suggest controls" for a keyword-based shortlist of controls the
+    document seems to mention. None of this is required to start
+    assessing — it's reference material, not a gate.
+  - **Fine-tune specific controls (optional)** — a collapsed, secondary
+    per-framework checklist. Every control is in scope by default;
+    deselect what doesn't apply and add it back at any time.
 - **Assessment Workspace** (`/assessment`) — tabs across the three
   frameworks. An accordion tree of in-scope functions → controls on the left
   (collapsed by default; each row shows a status icon); a detail panel on
@@ -73,17 +77,18 @@ reports possible without forcing the frameworks into a shared shape.
 Each framework lives in its own module (`samm.ts`, `nistCsf.ts`, `ssdf.ts`)
 exporting a `Framework` object, aggregated by `index.ts`. **To add another
 framework:** write a new module exporting a `Framework`, add it to the
-`frameworks` array in `index.ts`. No page needs to change — the Dashboard,
+`frameworks` array in `index.ts`. No page needs to change — Home, the
 Assessment Workspace, and Reports pages all iterate over the registry.
 
 ### Storage layer (`src/storage`)
 
 Low-level, storage-specific wrappers with no domain knowledge:
 
-- `idb.ts` — a minimal IndexedDB wrapper (one object store, `evidenceBlobs`,
-  keyed by evidence id) for evidence file bytes.
+- `idb.ts` — a minimal IndexedDB wrapper (one object store, keyed by any
+  string id) for file bytes — evidence uploads and the scope document's
+  optional attachment alike.
 - `localStore.ts` — a minimal localStorage JSON-collection helper for
-  metadata (evidence records, observations).
+  metadata (evidence records, observations, scope selections/document).
 
 ### Service layer (`src/services`) — the only place that persists data
 
@@ -113,28 +118,33 @@ working — each file exports only one kind of thing.)
 ### Scoring (`src/utils/scoring.ts`)
 
 Pure functions with no I/O: `scoreFunction`, `scoreFramework`,
-`overallAverageRating`, and `topGaps`. Both the Dashboard and Reports pages
-call these with the frameworks + observations they already have from
-`AppDataContext` — the scoring math lives in exactly one place.
+`overallAverageRating`, and `topGaps`. Reports calls these with the
+frameworks + observations it already has from `AppDataContext` — the
+scoring math lives in exactly one place. (Home deliberately shows none of
+this — it's engagement setup, not a dashboard; Reports is where maturity is
+reported.)
 
 ### Assessment scope (`src/utils/scope.ts`, `src/utils/suggest.ts`, `scopeService.ts`)
 
 Two independent pieces of scope state, both served by `scopeService.ts`:
 
-- A `ScopeDocument` (`{ text, updatedAt }`) — the free-text description of
-  the engagement, edited on the Scope page, autosaved on blur, and readable
-  (read-only, with a Copy button) from a collapsed panel on the Assessment
-  Workspace so it's on hand during review. It has no effect on what's
-  rated or counted — it's pure reference material.
+- A `ScopeDocument` — the engagement's intake profile (`reviewLevel`,
+  `applicationType`, `complianceRequirements`) plus its free-text scope
+  description and an optional uploaded attachment (file bytes in IndexedDB;
+  filename/mime/size in the record). Edited on Home, autosaved as each
+  field changes, and readable (read-only, with a Copy button, plus the
+  intake fields as chips) from a collapsed panel on the Assessment
+  Workspace so it's on hand during review. None of it affects what's rated
+  or counted — it's pure reference material.
 - A `ScopeSelection` (`{ frameworkId, includedControlIds }`) per framework,
   which does drive what's rated and counted; **no record for a framework
   means "everything is in scope"** (the default), so the app works
   unchanged until someone edits the checklist. `applyScope(framework,
   includedControlIds)` in `utils/scope.ts` returns a copy of a `Framework`
   containing only in-scope controls (and only the functions that still have
-  at least one); Dashboard, Assessment, and Reports all call it before
-  scoring or rendering, so narrowing this checklist is the one lever that
-  changes what's shown and counted everywhere.
+  at least one); Home, Assessment, and Reports all call it before scoring
+  or rendering, so narrowing this checklist is the one lever that changes
+  what's shown and counted everywhere.
 
 `utils/suggest.ts` bridges the two: `suggestControls(scopeText, frameworks)`
 is a pure, offline keyword match (no backend, no AI call) between the scope
@@ -154,44 +164,44 @@ showing "X of Y controls rated". No chart library is used.
 ### Visual design
 
 The UI follows Deloitte's digital brand guidance: a dark gray (`#282728`)
-header with white nav text and a neon-green (`#86EB22`) active state — the
+nav header with white text and a neon-green (`#86EB22`) active state — the
 brand's own dark-theme pairing, chosen for a more professional, console-like
-feel — under a 4px green gradient signature bar; Deloitte Green (`#86BC25`)
-as the primary accent everywhere else (buttons, chart bars, stat-tile
-accents); Open Sans typography; and a subtle circular motif on the Dashboard
-hero, kept low-opacity so it never competes with the data. Colors and
-typography live in `src/theme.ts` (MUI theme) and `src/components/Layout.tsx`
-(header), plus `index.html` (font loading) and `src/index.css` (page
-background).
+feel — under a 4px green gradient signature bar, echoed by a matching dark
+hero band at the top of Home; Deloitte Green (`#86BC25`) as the primary
+accent everywhere else (buttons, chart bars, card accents); Open Sans
+typography; and a subtle circular motif on the Home hero, kept low-opacity
+so it never competes with the content. Colors and typography live in
+`src/theme.ts` (MUI theme) and `src/components/Layout.tsx` (header), plus
+`index.html` (font loading) and `src/index.css` (page background).
 
 ## Project layout
 
 ```
 src/
-  types/              domain model (Framework, Control, Observation, Evidence, ScopeSelection, ...)
+  types/              domain model (Framework, Control, Observation, Evidence, ScopeSelection, ScopeDocument, ...)
   data/frameworks/     framework registry (samm.ts, nistCsf.ts, ssdf.ts, index.ts)
   storage/             low-level IndexedDB / localStorage wrappers
   services/            the only modules that read/write persisted data
   context/             AppDataContext — the only way pages touch persisted data
-  utils/scoring.ts     pure scoring functions shared by Dashboard + Reports
-  utils/scope.ts       pure scope-filtering functions shared by Dashboard/Assessment/Reports
-  utils/suggest.ts     pure keyword control-suggestion function used by the Scope page
+  utils/scoring.ts     pure scoring functions used by Reports
+  utils/scope.ts       pure scope-filtering functions shared by Home/Assessment/Reports
+  utils/suggest.ts     pure keyword control-suggestion function used on Home
   components/          shared UI (Layout, MaturityBarChart, evidence/scope dialogs)
-  pages/               DashboardPage, ScopePage, AssessmentPage, EvidencePage, ReportsPage
+  pages/               HomePage, AssessmentPage, EvidencePage, ReportsPage
 ```
 
 ## Verification performed
 
 - `npm install && npm run build` — typecheck + production build succeed.
 - `npm run lint` — oxlint clean, no warnings.
-- Drove the app end-to-end in headless Chromium (Playwright) across all five
-  pages: added a file and an interview note to the Evidence Library (plus a
-  multi-file upload creating separate evidence items), narrowed scope on the
-  Scope page and confirmed the change flowed through to the Assessment
-  Workspace/Dashboard/Reports, wrote a scope document, copied it to the
-  clipboard, ran control suggestions from it and applied a subset, confirmed
-  the same document is readable from the Assessment Workspace's reference
-  panel, and rated/annotated controls (with linked evidence) in the
-  Assessment Workspace across two frameworks. Confirmed the Dashboard and
-  Reports charts update live with correct averages and gap listings. No
-  console or page errors were observed.
+- Drove the app end-to-end in headless Chromium (Playwright) across all four
+  pages: filled in the Home page's engagement details (review level,
+  application type, compliance requirements), wrote and uploaded a scope
+  document (confirming the attachment chip, copy-to-clipboard, and control
+  suggestions all work), narrowed the fine-tune control checklist and
+  confirmed the change flowed through to Assessment/Reports, confirmed the
+  same scope reference (intake chips + text) is readable from the
+  Assessment Workspace, added evidence (including a multi-file upload) to
+  the Evidence Library, and rated/annotated controls with linked evidence
+  across frameworks. Confirmed the Reports charts update live with correct
+  averages and gap listings. No console or page errors were observed.

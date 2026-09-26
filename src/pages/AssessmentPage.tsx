@@ -119,6 +119,10 @@ export function AssessmentPage() {
     return getObservation(framework.id, control.id)?.status ?? 'not-started';
   }
 
+  const hasScopeReference = Boolean(
+    scopeDocument?.text.trim() || scopeDocument?.reviewLevel || scopeDocument?.applicationType || scopeDocument?.complianceRequirements.length,
+  );
+
   return (
     <Box>
       <Typography variant="h5" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -128,31 +132,47 @@ export function AssessmentPage() {
         Rate each control on the normalized 0–3 maturity scale and link supporting evidence.
       </Typography>
 
-      {scopeDocument?.text.trim() && (
+      {hasScopeReference && (
         <Accordion disableGutters variant="outlined" sx={{ mb: 2 }}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography variant="subtitle2">Engagement scope reference</Typography>
           </AccordionSummary>
           <AccordionDetails>
-            <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
-              <Button
-                size="small"
-                startIcon={<ContentCopyIcon />}
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(scopeDocument.text);
-                    setCopied(true);
-                  } catch {
-                    // Clipboard access can be denied by the browser; nothing to recover from here.
-                  }
-                }}
-              >
-                Copy
-              </Button>
+            <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 1.5, gap: 1 }}>
+              {scopeDocument?.reviewLevel && (
+                <Chip
+                  size="small"
+                  label={scopeDocument.reviewLevel === 'application' ? 'Application-level review' : 'Organization-level review'}
+                />
+              )}
+              {scopeDocument?.applicationType && <Chip size="small" label={scopeDocument.applicationType} />}
+              {scopeDocument?.complianceRequirements.map((req) => (
+                <Chip key={req} size="small" variant="outlined" label={req} />
+              ))}
             </Stack>
-            <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
-              {scopeDocument.text}
-            </Typography>
+            {scopeDocument?.text.trim() && (
+              <>
+                <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+                  <Button
+                    size="small"
+                    startIcon={<ContentCopyIcon />}
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(scopeDocument.text);
+                        setCopied(true);
+                      } catch {
+                        // Clipboard access can be denied by the browser; nothing to recover from here.
+                      }
+                    }}
+                  >
+                    Copy
+                  </Button>
+                </Stack>
+                <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
+                  {scopeDocument.text}
+                </Typography>
+              </>
+            )}
           </AccordionDetails>
         </Accordion>
       )}
@@ -173,7 +193,7 @@ export function AssessmentPage() {
             {framework.functions.length === 0 && (
               <Box sx={{ p: 3 }}>
                 <Typography variant="body2" color="text.secondary">
-                  No controls are in scope for this framework. Add some on the Scope page.
+                  No controls are in scope for this framework. Add some on the Home page.
                 </Typography>
               </Box>
             )}
