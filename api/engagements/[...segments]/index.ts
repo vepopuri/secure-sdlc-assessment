@@ -1,74 +1,24 @@
-// All engagement endpoints consolidated into one catch-all function:
-//   GET/POST   /api/engagements
+// Everything under /api/engagements/:id/... consolidated into one
+// catch-all function:
 //   GET/PATCH/DELETE /api/engagements/:id
 //   GET/POST   /api/engagements/:id/members
 //   PATCH/DELETE /api/engagements/:id/members/:userId
-// See api/auth/[action].ts for why (Vercel Hobby plan's 12-function cap).
+// (The bare /api/engagements collection is its own file, api/engagements/index.ts —
+// a mandatory catch-all can't match zero segments.)
+//
+// This is a bracket-named FOLDER (not a bracket-named file) on purpose:
+// this project's Vercel builder crashes at invocation (FUNCTION_INVOCATION_FAILED)
+// for a top-level bracket-named FILE like [action].ts, but works fine for
+// the equivalent bracket-named FOLDER with an index.ts inside it.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { NeonQueryFunction } from '@neondatabase/serverless';
 import { randomBytes, createHash } from 'node:crypto';
-import { getSql } from '../_lib/db';
-import { requireSession, requireMember, requireRole, sendError, HttpError, type EngagementRole } from '../_lib/authz';
+import { getSql } from '../../_lib/db';
+import { requireSession, requireMember, requireRole, sendError, HttpError, type EngagementRole } from '../../_lib/authz';
 
 const VALID_ROLES: EngagementRole[] = ['owner', 'reviewer', 'viewer'];
 const INVITE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
-interface CreateEngagementBody {
-  name?: string;
-  clientName?: string;
-  frameworkIds?: string[];
-}
-
-async function handleCollection(req: VercelRequest, res: VercelResponse, userId: string) {
-  const sql = getSql();
-
-  if (req.method === 'GET') {
-    const rows = await sql`
-      select
-        e.id, e.name, e.client_name as "clientName", e.framework_ids as "frameworkIds",
-        e.updated_at as "updatedAt", m.role,
-        (select count(*)::int from engagement_members where engagement_id = e.id) as "memberCount"
-      from engagements e
-      join engagement_members m on m.engagement_id = e.id
-      where m.user_id = ${userId}
-      order by e.updated_at desc
-    `;
-    res.status(200).json({ engagements: rows });
-    return;
-  }
-
-  if (req.method === 'POST') {
-    const body = (req.body ?? {}) as CreateEngagementBody;
-    const name = body.name?.trim();
-    if (!name) throw new HttpError(400, 'Engagement name is required.');
-    const clientName = body.clientName?.trim() || null;
-    const frameworkIds = Array.isArray(body.frameworkIds) ? body.frameworkIds : [];
-
-    const rows = await sql`
-      insert into engagements (name, client_name, framework_ids, created_by)
-      values (${name}, ${clientName}, ${frameworkIds}::text[], ${userId})
-      returning id, name, client_name as "clientName", framework_ids as "frameworkIds", updated_at as "updatedAt"
-    `;
-    const engagement = rows[0] as {
-      id: string;
-      name: string;
-      clientName: string | null;
-      frameworkIds: string[];
-      updatedAt: string;
-    };
-
-    await sql`
-      insert into engagement_members (engagement_id, user_id, role, invited_by)
-      values (${engagement.id}, ${userId}, 'owner', ${userId})
-    `;
-
-    res.status(201).json({ engagement: { ...engagement, role: 'owner', memberCount: 1 } });
-    return;
-  }
-
-  res.status(405).json({ error: 'Method not allowed. Use GET or POST.' });
-}
 
 interface UpdateEngagementBody {
   name?: string;
@@ -271,7 +221,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const user = await requireSession(req);
     const segments = Array.isArray(req.query.segments) ? req.query.segments : [];
 
-    if (segments.length === 0) return await handleCollection(req, res, user.id);
     if (segments.length === 1) return await handleEngagement(req, res, user.id, segments[0]);
     if (segments.length === 2 && segments[1] === 'members') return await handleMembers(req, res, user.id, segments[0]);
     if (segments.length === 3 && segments[1] === 'members') {

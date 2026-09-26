@@ -73,19 +73,41 @@ engagement data is actually shared between members.
   variables; without `RESEND_API_KEY` set, signup still works but no email
   is actually sent (logged as a warning), so accounts are stuck unverified
   until it's configured.
-- **All auth endpoints are one function, `api/auth/[action].ts`** (a
-  dynamic route: `req.query.action` picks `signup` / `login` / `logout` /
-  `session` / `verify-email` / `resend-verification` — the URLs the
-  frontend calls are unchanged), and **all engagement endpoints are one
-  function, `api/engagements/[...segments].ts`** (a catch-all route). This
-  is deliberate, not just tidiness: this project is on Vercel's **Hobby
-  plan, which caps a deployment at 12 Serverless Functions** — splitting
-  every endpoint into its own file hit that limit almost immediately
-  (crashing with a bare `FUNCTION_INVOCATION_FAILED`, or silently failing
-  to deploy at all past the 12th), which is why the project currently has
-  only 4 real functions total (those two, `api/generate-report.ts`, and
-  `api/invites/accept.ts`) with plenty of headroom for whatever's added
-  next.
+- **All auth endpoints are one function, `api/auth/[action]/index.ts`**
+  (a dynamic route: `req.query.action` picks `signup` / `login` /
+  `logout` / `session` / `verify-email` / `resend-verification` — the
+  URLs the frontend calls are unchanged), and **all engagement-by-id
+  endpoints are one function, `api/engagements/[...segments]/index.ts`**
+  (a catch-all route; the bare `/api/engagements` collection is its own
+  small `api/engagements/index.ts`, since a mandatory catch-all can't
+  match zero segments). This is deliberate, not just tidiness: this
+  project is on Vercel's **Hobby plan, which caps a deployment at 12
+  Serverless Functions** — splitting every endpoint into its own file hit
+  that limit almost immediately (crashing with a bare
+  `FUNCTION_INVOCATION_FAILED`, or silently failing to deploy at all past
+  the 12th), which is why the project has only 5 real functions total
+  (those two, `api/generate-report.ts`, and `api/invites/accept.ts`, plus
+  the split engagements collection) with plenty of headroom for whatever
+  gets added next.
+- **Dynamic routes must be bracket-named *folders* with an `index.ts`
+  inside, not bracket-named files.** `api/auth/[action].ts` (a file)
+  built successfully but crashed with `FUNCTION_INVOCATION_FAILED` on
+  every single request, even ones with zero imports at all;
+  `api/auth/[action]/index.ts` (the identical code, as a folder) works
+  correctly. This appears to be a real quirk/limitation of this
+  project's Vercel Node.js function builder rather than anything
+  documented — if you add another dynamic route, follow the folder
+  pattern these two use, not a bare bracket-named file.
+- **`vercel.json`'s rewrites must never touch `/api/*` paths at all.**
+  An earlier version had an identity rewrite (`/api/(.*) → /api/$1`)
+  meant to "protect" API routes from the SPA catch-all; once dynamic
+  routes existed, that rewrite silently broke Vercel's own dynamic-route
+  matching for them (exact-path files still resolved fine, since an
+  exact filesystem match is checked first, but bracket-parameterized
+  ones stopped matching, falling through to the SPA's `index.html`
+  instead of erroring). The current single rule,
+  `{"source": "/((?!api/).*)", "destination": "/index.html"}`, only ever
+  rewrites non-API paths, leaving `/api/*` completely untouched.
 - Apply migrations against your Neon database with:
   ```bash
   DATABASE_URL=<your neon connection string> npm run migrate
