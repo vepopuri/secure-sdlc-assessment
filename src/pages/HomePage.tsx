@@ -28,9 +28,16 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
+import DonutLargeIcon from '@mui/icons-material/DonutLarge';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TuneIcon from '@mui/icons-material/Tune';
+import VerifiedIcon from '@mui/icons-material/Verified';
+import SummarizeIcon from '@mui/icons-material/Summarize';
 import { frameworks, allControlIds } from '../data/frameworks';
 import { useAppData } from '../context/useAppData';
-import { includedControlIdsFor } from '../utils/scope';
+import { includedControlIdsFor, applyScope } from '../utils/scope';
+import { scoreFramework, overallAverageRating } from '../utils/scoring';
 import { formatBytes } from '../utils/formatBytes';
 import { SuggestControlsDialog } from '../components/scope/SuggestControlsDialog';
 import { WorkflowIllustration } from '../components/WorkflowIllustration';
@@ -77,6 +84,87 @@ function CardHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
+interface StatTileProps {
+  icon: React.ElementType;
+  value: string;
+  label: string;
+  color: string;
+}
+
+function StatTile({ icon: Icon, value, label, color }: StatTileProps) {
+  return (
+    <Box
+      sx={{
+        flex: 1,
+        minWidth: 130,
+        p: 2,
+        borderRadius: 2,
+        bgcolor: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(255,255,255,0.12)',
+        transition: 'transform 0.15s ease, border-color 0.15s ease',
+        '&:hover': { transform: 'translateY(-3px)', borderColor: color },
+      }}
+    >
+      <Icon sx={{ color, fontSize: 20, mb: 0.75 }} />
+      <Typography variant="h5" sx={{ fontWeight: 700, color: '#FFFFFF', lineHeight: 1.1 }}>
+        {value}
+      </Typography>
+      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.65)' }}>
+        {label}
+      </Typography>
+    </Box>
+  );
+}
+
+interface StepCardProps {
+  icon: React.ElementType;
+  color: string;
+  title: string;
+  description: string;
+  onClick: () => void;
+}
+
+function StepCard({ icon: Icon, color, title, description, onClick }: StepCardProps) {
+  return (
+    <Paper
+      variant="outlined"
+      onClick={onClick}
+      sx={{
+        p: 2.5,
+        height: '100%',
+        cursor: 'pointer',
+        transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: '0 8px 20px rgba(0,0,0,0.1)',
+          borderColor: color,
+        },
+      }}
+    >
+      <Box
+        sx={{
+          width: 40,
+          height: 40,
+          borderRadius: 1.5,
+          bgcolor: '#282728',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          mb: 1.5,
+        }}
+      >
+        <Icon sx={{ color, fontSize: 22 }} />
+      </Box>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
+        {title}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+    </Paper>
+  );
+}
+
 export function HomePage() {
   const {
     scope,
@@ -86,8 +174,18 @@ export function HomePage() {
     setScopeDocumentAttachment,
     removeScopeDocumentAttachment,
     getScopeDocumentAttachmentUrl,
+    evidence,
+    observations,
   } = useAppData();
   const navigate = useNavigate();
+
+  const frameworkScores = frameworks.map((f) =>
+    scoreFramework(applyScope(f, includedControlIdsFor(scope, f.id)), observations),
+  );
+  const totalControls = frameworkScores.reduce((sum, s) => sum + s.totalCount, 0);
+  const totalRated = frameworkScores.reduce((sum, s) => sum + s.ratedCount, 0);
+  const pctRated = totalControls > 0 ? Math.round((totalRated / totalControls) * 100) : 0;
+  const avgMaturity = overallAverageRating(frameworkScores);
 
   const [textDraft, setTextDraft] = useState(scopeDocument?.text ?? '');
   const [lastDocKey, setLastDocKey] = useState(scopeDocument?.updatedAt ?? null);
@@ -192,7 +290,7 @@ export function HomePage() {
 
         <WorkflowIllustration />
 
-        <Stack direction="row" spacing={1.5} justifyContent="center" sx={{ mb: 4 }}>
+        <Stack direction="row" spacing={1.5} justifyContent="center" sx={{ mb: 3 }}>
           <Button
             variant="contained"
             endIcon={<ArrowForwardIcon />}
@@ -209,9 +307,55 @@ export function HomePage() {
             View reports
           </Button>
         </Stack>
+
+        <Stack direction="row" spacing={1.5} sx={{ maxWidth: 720, mx: 'auto' }}>
+          <StatTile icon={FactCheckIcon} value={String(totalControls)} label="Controls in scope" color="#00A3E0" />
+          <StatTile icon={DonutLargeIcon} value={`${pctRated}%`} label="Controls assessed" color="#86BC25" />
+          <StatTile icon={DescriptionOutlinedIcon} value={String(evidence.length)} label="Evidence collected" color="#00A3E0" />
+          <StatTile icon={TrendingUpIcon} value={`${avgMaturity.toFixed(1)} / 3`} label="Avg. maturity" color="#86BC25" />
+        </Stack>
       </Box>
 
-      <Grid container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StepCard
+            icon={TuneIcon}
+            color="#00A3E0"
+            title="Scope & plan"
+            description="Define review level, application, and compliance context."
+            onClick={() => document.getElementById('scope-section')?.scrollIntoView({ behavior: 'smooth' })}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StepCard
+            icon={UploadFileIcon}
+            color="#86BC25"
+            title="Collect evidence"
+            description="Upload documents and interview notes, linked to specific controls."
+            onClick={() => navigate('/evidence')}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StepCard
+            icon={VerifiedIcon}
+            color="#00A3E0"
+            title="Assess & score"
+            description="Rate maturity per control across SAMM, NIST CSF, and SSDF."
+            onClick={() => navigate('/assessment')}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StepCard
+            icon={SummarizeIcon}
+            color="#86BC25"
+            title="Report & present"
+            description="Compile findings into a defensible, presentation-ready report."
+            onClick={() => navigate('/reports')}
+          />
+        </Grid>
+      </Grid>
+
+      <Grid id="scope-section" container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
         <Grid size={{ xs: 12, md: 6 }}>
           <Paper variant="outlined" sx={{ p: 3, height: '100%' }}>
             <CardHeader>Engagement details</CardHeader>

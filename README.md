@@ -231,6 +231,20 @@ It's purely decorative — it carries no state and duplicates no progress
 tracking — styled after a reference workflow-diagram illustration but
 using the app's own brand colors instead of introducing new ones.
 
+### Live snapshot stats and step cards (`src/pages/HomePage.tsx`)
+
+Below the CTA buttons, a row of four stat tiles (`StatTile`) reports real
+numbers pulled live from `AppDataContext` via `scoreFramework`/
+`overallAverageRating` — controls in scope, percent assessed, evidence
+collected, and average maturity — never placeholder figures. Each tile
+lifts slightly and picks up an accent border on hover. Beneath the hero,
+four `StepCard` tiles ("Scope & plan", "Collect evidence", "Assess &
+score", "Report & present") mirror the engagement phases as clickable,
+hover-elevating cards that route to the relevant page (or scroll to the
+scope section on the same page) — a Snyk-style modular card grid restyled
+in the app's own Deloitte palette rather than introducing new colors.
+
+
 ## Project layout
 
 ```
