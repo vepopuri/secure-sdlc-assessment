@@ -5,13 +5,14 @@ multiple frameworks (OWASP SAMM v2, NIST CSF 2.0, NIST SSDF SP 800-218) on a
 single normalized 0–3 maturity scale, with an evidence library to back up
 findings and a dashboard/report view for cross-framework reporting.
 
-All assessment data is persisted client-side (localStorage + IndexedDB) behind
-a service layer that is designed to be swapped for a real API later without
-touching any page. The one deliberate exception is `api/generate-report.ts`,
-a small Vercel serverless function that lets Reports draft the executive
-summary with a real AI call instead of the offline template (see below) —
-it's the only place in this project that holds a secret, and the rest of the
-app never depends on it being configured.
+All assessment data (scope, evidence, observations, custom controls) is
+still persisted client-side (localStorage + IndexedDB) behind a service
+layer that is designed to be swapped for a real API later without touching
+any page. Two things now sit behind a real backend: `api/generate-report.ts`
+lets Reports draft the executive summary with a real AI call instead of the
+offline template (see below), and a Postgres database (Neon) plus a set of
+`api/auth/*` / `api/engagements/*` functions provide real user accounts and
+an engagement/membership schema — see "Database & authentication" below.
 
 ## Running it
 
@@ -36,8 +37,48 @@ for evidence file bytes). Clearing site data resets the app.
   `src/components/MaturityBarChart.tsx`); `pptxgenjs` generates the
   PowerPoint export client-side (see below)
 
+## Database & authentication
+
+A real Postgres database (Neon, connected as a Vercel Storage integration)
+and a set of `api/auth/*` / `api/engagements/*` serverless functions provide
+real user accounts and an engagement/membership schema — the second
+deliberate backend exception alongside the AI endpoint. **Assessment data
+itself (scope, evidence, observations, custom controls) is still
+client-side** for now; this phase only gets accounts and roles working end
+to end. A later phase reimplements the services layer against the API so
+engagement data is actually shared between members.
+
+- **Schema** (`db/migrations/0001_init.sql`): `users`, `sessions`,
+  `magic_link_tokens` (schema only — no magic-link endpoints yet),
+  `engagements`, `engagement_members` (role: `owner` / `reviewer` /
+  `viewer`), `engagement_invites`.
+- **Sessions** are DB-backed opaque tokens, not JWT: the raw token lives
+  only in an httpOnly cookie, its SHA-256 hash in the `sessions` table.
+  This makes membership/role changes revocable immediately — a stateless
+  JWT can't do that without reinventing a session table anyway.
+- **Passwords** are hashed with `bcryptjs` (pure JS, no native bindings —
+  avoids the classic Vercel serverless build failure with native `bcrypt`).
+- Apply migrations against your Neon database with:
+  ```bash
+  DATABASE_URL=<your neon connection string> npm run migrate
+  ```
+  Once a Postgres store is connected to the Vercel project (Storage tab),
+  `POSTGRES_URL` is auto-injected into deployed functions —
+  `api/_lib/db.ts` reads `DATABASE_URL` first, falling back to
+  `POSTGRES_URL`.
+- Local `npm run dev` (plain Vite) has no `/api` proxy, so `api/*`
+  functions won't respond under `vite dev` — use `vercel dev` instead when
+  you need to exercise auth/engagement endpoints locally.
+- `src/context/auth/` (`AuthContext`, `useAuth`) is a separate context from
+  `AppDataContext` — different lifecycle (loads once at boot) and shape.
+  It hydrates via `GET /api/auth/session` and gates the app behind
+  `src/routes/RequireAuth.tsx`; `/login` and `/signup` are the only public
+  routes.
+
 ## Pages
 
+- **Login / Sign up** (`/login`, `/signup`) — email + password
+  authentication. Everything else below requires being signed in.
 - **Home** (`/`) — a clean hero (title, one summary paragraph, two CTAs,
   an animated Deloitte-palette background, and three interactive framework
   badges) plus a "Where would you like to start?" grid of four clickable

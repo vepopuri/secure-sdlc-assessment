@@ -1,5 +1,21 @@
-import { AppBar, Box, Container, Tab, Tabs, Toolbar, Typography } from '@mui/material';
+import { useState } from 'react';
+import {
+  AppBar,
+  Avatar,
+  Box,
+  Container,
+  Divider,
+  ListItemIcon,
+  Menu,
+  MenuItem,
+  Tab,
+  Tabs,
+  Toolbar,
+  Typography,
+} from '@mui/material';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/auth/useAuth';
 
 const NAV_ITEMS = [
   { label: 'Home', path: '/' },
@@ -29,10 +45,18 @@ function BrandMark() {
 export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const currentIndex = Math.max(
     0,
     NAV_ITEMS.findIndex((item) => item.path === location.pathname),
   );
+
+  async function handleLogout() {
+    setMenuAnchor(null);
+    await logout();
+    navigate('/login', { replace: true });
+  }
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -66,6 +90,36 @@ export function Layout() {
               />
             ))}
           </Tabs>
+          <Box sx={{ flex: 1 }} />
+          {user && (
+            <>
+              <Avatar
+                onClick={(e) => setMenuAnchor(e.currentTarget)}
+                sx={{ width: 32, height: 32, bgcolor: '#86BC25', fontSize: 14, cursor: 'pointer' }}
+              >
+                {user.displayName.charAt(0).toUpperCase()}
+              </Avatar>
+              <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
+                <MenuItem disabled sx={{ opacity: '1 !important' }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                      {user.displayName}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {user.email}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+                <Divider />
+                <MenuItem onClick={handleLogout}>
+                  <ListItemIcon>
+                    <LogoutIcon fontSize="small" />
+                  </ListItemIcon>
+                  Log out
+                </MenuItem>
+              </Menu>
+            </>
+          )}
         </Toolbar>
       </AppBar>
       <Container maxWidth="xl" sx={{ flex: 1, py: 3 }}>
