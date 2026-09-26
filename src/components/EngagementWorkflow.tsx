@@ -6,24 +6,18 @@
 // icon, and a faint flowchart-style backdrop (dashed connectors, floating
 // shapes) runs behind the row for a more "workflow diagram" feel.
 import { Box, Stack, Tooltip, Typography } from '@mui/material';
-import FactCheckIcon from '@mui/icons-material/FactCheck';
-import ArticleIcon from '@mui/icons-material/Article';
-import VerifiedIcon from '@mui/icons-material/Verified';
-import SummarizeIcon from '@mui/icons-material/Summarize';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import { frameworks } from '../data/frameworks';
 import { useAppData } from '../context/useAppData';
 import { applyScope, includedControlIdsFor } from '../utils/scope';
 import { scoreFramework } from '../utils/scoring';
 
-type PersonProp = 'handshake' | 'calendar' | 'speech';
+type PersonProp = 'handshake' | 'calendar' | 'speech' | 'checklist' | 'search' | 'shield' | 'chart' | 'trophy';
 
 interface WorkflowStep {
   key: string;
   label: string;
   description: string;
-  icon?: React.ElementType;
-  person?: PersonProp;
+  person: PersonProp;
 }
 
 const STEPS: WorkflowStep[] = [
@@ -37,7 +31,7 @@ const STEPS: WorkflowStep[] = [
     key: 'scope',
     label: 'Scope Finalization',
     description: 'Finalize which controls are in scope for this engagement.',
-    icon: FactCheckIcon,
+    person: 'checklist',
   },
   {
     key: 'collection',
@@ -49,7 +43,7 @@ const STEPS: WorkflowStep[] = [
     key: 'docreview',
     label: 'Documentation Review',
     description: 'Review submitted documentation against each control.',
-    icon: ArticleIcon,
+    person: 'search',
   },
   {
     key: 'interview',
@@ -61,19 +55,19 @@ const STEPS: WorkflowStep[] = [
     key: 'validate',
     label: 'Process Data & Validate',
     description: 'Rate each control and validate findings against the framework.',
-    icon: VerifiedIcon,
+    person: 'shield',
   },
   {
     key: 'report',
     label: 'Prepare Report',
     description: 'Compile findings into the assessment report.',
-    icon: SummarizeIcon,
+    person: 'chart',
   },
   {
     key: 'finalize',
     label: 'Review & Finalize',
     description: 'Review the report with stakeholders and close out the engagement.',
-    icon: EmojiEventsIcon,
+    person: 'trophy',
   },
 ];
 
@@ -109,6 +103,47 @@ function PersonBadge({ prop, color }: { prop: PersonProp; color: string }) {
           <circle cx="-3" cy="3.5" r="0.9" fill="#00A3E0" />
           <circle cx="0" cy="3.5" r="0.9" fill="#00A3E0" />
           <circle cx="3" cy="3.5" r="0.9" fill="#00A3E0" />
+        </g>
+      )}
+      {prop === 'checklist' && (
+        <g transform="translate(12,14)">
+          <rect x="-6" y="-2" width="13" height="14" rx="2" fill="#FFFFFF" />
+          <path d="M-4 1l1.4 1.4L0 -0.5" stroke={DONE_COLOR} strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M-4 5l1.4 1.4L0 3.5" stroke={DONE_COLOR} strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <rect x="1.5" y="-0.6" width="4" height="1.2" fill="#00A3E0" />
+          <rect x="1.5" y="3.4" width="4" height="1.2" fill="#00A3E0" />
+        </g>
+      )}
+      {prop === 'search' && (
+        <g transform="translate(12,14)">
+          <rect x="-6" y="-2" width="12" height="14" rx="2" fill="#FFFFFF" />
+          <rect x="-4" y="0" width="8" height="1.4" fill="#00A3E0" opacity="0.8" />
+          <rect x="-4" y="3" width="8" height="1.4" fill="#00A3E0" opacity="0.8" />
+          <circle cx="4.5" cy="6.5" r="3" fill="none" stroke={DONE_COLOR} strokeWidth="1.4" />
+          <line x1="6.6" y1="8.6" x2="8.5" y2="10.5" stroke={DONE_COLOR} strokeWidth="1.6" strokeLinecap="round" />
+        </g>
+      )}
+      {prop === 'shield' && (
+        <g transform="translate(12,14)">
+          <path d="M0-2l7 2.5v4c0 4-3 6.5-7 8-4-1.5-7-4-7-8v-4z" fill="#FFFFFF" />
+          <path d="M-3 1.5l2 2 4-4.5" stroke={DONE_COLOR} strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+      )}
+      {prop === 'chart' && (
+        <g transform="translate(12,14)">
+          <rect x="-6" y="-2" width="13" height="14" rx="2" fill="#FFFFFF" />
+          <rect x="-4" y="4" width="2" height="6" fill="#00A3E0" />
+          <rect x="-1" y="1" width="2" height="9" fill={DONE_COLOR} />
+          <rect x="2" y="-1" width="2" height="11" fill="#00A3E0" />
+        </g>
+      )}
+      {prop === 'trophy' && (
+        <g transform="translate(12,14)">
+          <path d="M-3-2h6v4a3 3 0 0 1-6 0z" fill="#FFFFFF" />
+          <path d="M-3-1h-2a2 2 0 0 0 2 3.5" fill="none" stroke="#FFFFFF" strokeWidth="1.2" />
+          <path d="M3-1h2a2 2 0 0 1-2 3.5" fill="none" stroke="#FFFFFF" strokeWidth="1.2" />
+          <rect x="-1" y="2" width="2" height="2.5" fill="#FFFFFF" />
+          <path d="M-3 5h6l1 2.5h-8z" fill={DONE_COLOR} />
         </g>
       )}
     </svg>
@@ -184,7 +219,6 @@ export function EngagementWorkflow() {
           {STEPS.map((step, i) => {
             const isDone = doneMap[step.key];
             const isCurrent = i === currentIndex;
-            const Icon = step.icon;
             const iconColor = isDone ? '#FFFFFF' : isCurrent ? '#86EB22' : 'rgba(255,255,255,0.55)';
             const prevDone = i > 0 && doneMap[STEPS[i - 1].key];
             return (
@@ -235,11 +269,7 @@ export function EngagementWorkflow() {
                       '&:hover': { transform: 'scale(1.1)' },
                     }}
                   >
-                    {step.person ? (
-                      <PersonBadge prop={step.person} color={iconColor} />
-                    ) : (
-                      Icon && <Icon sx={{ color: iconColor, fontSize: 22 }} />
-                    )}
+                    <PersonBadge prop={step.person} color={iconColor} />
                   </Box>
                 </Tooltip>
                 <Typography

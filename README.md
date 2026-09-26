@@ -200,13 +200,13 @@ has `kind: 'interview-note'`; "Process Data & Validate" is done once any
 observation has a rating) — never fabricated progress. The first not-done
 stage in order is "current" and gets the glow; nothing before it is ever
 un-done once its underlying data exists, since these are one-way signals
-(you can't accidentally "undo" having entered a review level). The three
-people-facing stages (Kickoff, Document Collection & Meeting Scheduling,
-Interviews) render a small illustrated figure with a task-specific prop
-(a handshake, a calendar, a speech bubble) instead of a plain icon, and a
-faint scattering of dashed-flowchart shapes runs behind the whole row —
-both purely decorative, styled after a workflow-diagram illustration
-reference, using only the app's existing brand palette.
+(you can't accidentally "undo" having entered a review level). Every stage
+renders a small illustrated figure with a task-specific prop (a handshake,
+a calendar, a checklist, a magnifier, a speech bubble, a shield, a bar
+chart, a trophy) instead of a plain icon, and a faint scattering of
+dashed-flowchart shapes runs behind the whole row — both purely
+decorative, styled after a workflow-diagram illustration reference, using
+only the app's existing brand palette.
 
 ### Charts (`src/components/MaturityBarChart.tsx`)
 
@@ -230,14 +230,23 @@ typography. Colors and typography live in `src/theme.ts` (MUI theme) and
 
 ### Home hero illustration (`src/components/WorkflowIllustration.tsx`)
 
-Three hand-drawn flat-style figures (each plain inline SVG, no image
-assets) sit in the Home hero between the summary copy and the CTA buttons,
-linked by dashed flowchart connectors — a kickoff figure holding up an
-engagement card, an interview figure reaching toward a stakeholder, and a
-documentation-review figure checking off a checklist. It's purely
-decorative (unlike `EngagementWorkflow`'s stepper below it, it carries no
-state), styled after a reference workflow-diagram illustration but using
-the app's own brand colors instead of introducing new ones.
+Eight hand-drawn flat-style figures (each plain inline SVG, no image
+assets) — one per engagement stage, matching `EngagementWorkflow`'s stages
+one-for-one — sit in the Home hero between the summary copy and the CTA
+buttons, linked by a dashed zig-zag flowchart connector: a kickoff figure
+holding up an engagement card, a scope figure checking off a clipboard, a
+document-collection figure with a calendar and folder, a documentation-
+review figure checking off a checklist, an interview figure reaching
+toward a stakeholder, a validation figure with a verified shield, a report
+figure presenting a small chart, and a finalize figure raising a trophy.
+Each figure also carries a small floating cluster of two supporting
+Material icon badges (e.g. a handshake + calendar-check for Kickoff) so
+every stage reads with more than one visual cue, in the spirit of a
+professionally illustrated workflow diagram. On narrow screens the row
+scrolls horizontally rather than shrinking the figures illegibly. It's
+purely decorative (unlike `EngagementWorkflow`'s stepper below it, it
+carries no state), styled after a reference workflow-diagram illustration
+but using the app's own brand colors instead of introducing new ones.
 
 ## Project layout
 
