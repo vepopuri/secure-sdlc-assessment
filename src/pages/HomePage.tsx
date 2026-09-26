@@ -20,10 +20,6 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import TuneIcon from '@mui/icons-material/Tune';
-import VerifiedIcon from '@mui/icons-material/Verified';
-import SummarizeIcon from '@mui/icons-material/Summarize';
-import { frameworks, allControlIds } from '../data/frameworks';
 import { useAppData } from '../context/useAppData';
 import { formatBytes } from '../utils/formatBytes';
 import { SuggestControlsDialog } from '../components/scope/SuggestControlsDialog';
@@ -76,95 +72,6 @@ function CardHeader({ children }: { children: React.ReactNode }) {
         {children}
       </Typography>
     </Stack>
-  );
-}
-
-interface StepCardProps {
-  icon: React.ElementType;
-  color: string;
-  title: string;
-  description: string;
-  onClick: () => void;
-}
-
-function StepCard({ icon: Icon, color, title, description, onClick }: StepCardProps) {
-  return (
-    <Paper
-      variant="outlined"
-      onClick={onClick}
-      sx={{
-        p: 2.5,
-        height: '100%',
-        cursor: 'pointer',
-        transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: '0 8px 20px rgba(0,0,0,0.1)',
-          borderColor: color,
-        },
-        '&:hover .step-card-badge': { transform: 'scale(1.08)' },
-        '&:hover .step-card-arrow': { opacity: 1, transform: 'translateX(0)' },
-      }}
-    >
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
-        <Box
-          className="step-card-badge"
-          sx={{
-            width: 40,
-            height: 40,
-            borderRadius: 1.5,
-            bgcolor: '#282728',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'transform 0.15s ease',
-          }}
-        >
-          <Icon sx={{ color, fontSize: 22 }} />
-        </Box>
-        <ArrowForwardIcon
-          className="step-card-arrow"
-          sx={{ color, fontSize: 18, opacity: 0, transform: 'translateX(-4px)', transition: 'opacity 0.15s ease, transform 0.15s ease' }}
-        />
-      </Stack>
-      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
-        {title}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {description}
-      </Typography>
-    </Paper>
-  );
-}
-
-/** A framework badge in the hero: subtle, on-brand, and interactive rather than a static label. */
-function FrameworkBadge({ label, version, controlCount, onClick }: { label: string; version: string; controlCount: number; onClick: () => void }) {
-  return (
-    <Box
-      onClick={onClick}
-      sx={{
-        cursor: 'pointer',
-        px: 2,
-        py: 1,
-        borderRadius: 999,
-        border: '1px solid rgba(255,255,255,0.22)',
-        bgcolor: 'rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(2px)',
-        transition: 'transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease',
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          borderColor: '#86EB22',
-          bgcolor: 'rgba(134,235,34,0.08)',
-        },
-      }}
-    >
-      <Typography variant="body2" sx={{ fontWeight: 700, color: '#FFFFFF', lineHeight: 1.2 }}>
-        {label} <Box component="span" sx={{ fontWeight: 400, color: 'rgba(255,255,255,0.6)' }}>{version}</Box>
-      </Typography>
-      <Typography variant="caption" sx={{ color: '#86EB22' }}>
-        {controlCount} controls
-      </Typography>
-    </Box>
   );
 }
 
@@ -246,46 +153,71 @@ export function HomePage() {
         sx={{
           position: 'relative',
           overflow: 'hidden',
-          borderRadius: 2,
-          p: { xs: 2, sm: 2.5 },
-          mb: 3,
+          borderRadius: 3,
+          px: { xs: 3, sm: 6 },
+          py: { xs: 6, sm: 8 },
+          mb: 4,
           textAlign: 'center',
-          color: '#FFFFFF',
-          backgroundImage: 'linear-gradient(120deg, #1c2420, #282728, #123244, #282728)',
-          backgroundSize: '300% 300%',
-          animation: 'heroGradient 16s ease infinite',
-          '@keyframes heroGradient': {
-            '0%': { backgroundPosition: '0% 50%' },
-            '50%': { backgroundPosition: '100% 50%' },
-            '100%': { backgroundPosition: '0% 50%' },
-          },
+          color: '#282728',
+          backgroundImage: 'linear-gradient(135deg, #F3F8EC 0%, #FFFFFF 45%, #E9F6FB 100%)',
+          border: '1px solid rgba(0,0,0,0.06)',
         }}
       >
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.75 }}>
-          Secure SDLC Assessment
-        </Typography>
+        <Box
+          aria-hidden
+          sx={{
+            position: 'absolute',
+            top: -80,
+            right: -80,
+            width: 240,
+            height: 240,
+            borderRadius: '50%',
+            border: '1px solid rgba(134,188,37,0.25)',
+          }}
+        />
+        <Box
+          aria-hidden
+          sx={{
+            position: 'absolute',
+            bottom: -100,
+            left: -60,
+            width: 220,
+            height: 220,
+            borderRadius: '50%',
+            border: '1px solid rgba(0,163,224,0.2)',
+          }}
+        />
+
         <Typography
-          variant="body1"
-          sx={{ maxWidth: '100%', mx: 'auto', mb: 1.75, color: 'rgba(255,255,255,0.8)' }}
+          sx={{
+            position: 'relative',
+            fontWeight: 800,
+            lineHeight: 1.15,
+            mb: 2.5,
+            fontSize: { xs: '2rem', sm: '2.75rem', md: '3.25rem' },
+          }}
         >
-          A single workspace for running secure SDLC assessments, from kickoff through final report.
-          Scope, collect evidence, interview stakeholders, and score maturity across OWASP SAMM,
-          NIST CSF, and NIST SSDF for defensible, presentation-ready findings.
+          Assess the Maturity of
+          <br />
+          Your Secure <Box component="span" sx={{ color: '#86BC25' }}>SDLC</Box>
         </Typography>
 
-        <Stack direction="row" spacing={1.5} justifyContent="center" flexWrap="wrap" sx={{ gap: 1.5, mb: 2 }}>
-          {frameworks.map((f) => (
-            <FrameworkBadge
-              key={f.id}
-              label={f.shortName}
-              version={f.version}
-              controlCount={allControlIds(f).length}
-              onClick={() => navigate('/assessment')}
-            />
-          ))}
-        </Stack>
+        <Typography
+          variant="h6"
+          sx={{
+            position: 'relative',
+            maxWidth: 720,
+            mx: 'auto',
+            mb: 4,
+            fontWeight: 400,
+            color: 'rgba(40,39,40,0.7)',
+          }}
+        >
+          Scope, collect evidence, and score maturity across OWASP SAMM, NIST CSF, and NIST SSDF,
+          from kickoff through a presentation-ready report.
+        </Typography>
 
-        <Stack direction="row" spacing={1.5} justifyContent="center">
+        <Stack direction="row" spacing={1.5} justifyContent="center" flexWrap="wrap" rowGap={1.5} sx={{ position: 'relative' }}>
           <Button
             variant="contained"
             endIcon={<ArrowForwardIcon />}
@@ -296,59 +228,20 @@ export function HomePage() {
           </Button>
           <Button
             variant="outlined"
-            sx={{ color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.4)' }}
+            sx={{ color: '#282728', borderColor: 'rgba(40,39,40,0.3)' }}
+            onClick={() => navigate('/evidence')}
+          >
+            Collect evidence
+          </Button>
+          <Button
+            variant="outlined"
+            sx={{ color: '#282728', borderColor: 'rgba(40,39,40,0.3)' }}
             onClick={() => navigate('/reports')}
           >
             View reports
           </Button>
         </Stack>
       </Box>
-
-      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
-        Where would you like to start?
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Jump straight into any part of the engagement, wherever makes sense for you.
-      </Typography>
-
-      <Grid container spacing={2} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StepCard
-            icon={TuneIcon}
-            color="#00A3E0"
-            title="Scope & plan"
-            description="Define review level, application, and compliance context."
-            onClick={() => document.getElementById('scope-section')?.scrollIntoView({ behavior: 'smooth' })}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StepCard
-            icon={UploadFileIcon}
-            color="#86BC25"
-            title="Collect evidence"
-            description="Upload documents and interview notes, linked to specific controls."
-            onClick={() => navigate('/evidence')}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StepCard
-            icon={VerifiedIcon}
-            color="#00A3E0"
-            title="Assess & score"
-            description="Rate maturity per control across SAMM, NIST CSF, and SSDF."
-            onClick={() => navigate('/assessment')}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StepCard
-            icon={SummarizeIcon}
-            color="#86BC25"
-            title="Report & present"
-            description="Compile findings into a defensible, presentation-ready report."
-            onClick={() => navigate('/reports')}
-          />
-        </Grid>
-      </Grid>
 
       <Grid id="scope-section" container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
         <Grid size={{ xs: 12, md: 6 }}>
