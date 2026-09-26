@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { PING } from '../../_lib/ping';
+import { PING } from '../../lib/ping';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const action = req.query.action;

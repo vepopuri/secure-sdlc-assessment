@@ -13,8 +13,8 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { randomBytes, createHash } from 'node:crypto';
-import { getSql, type SqlFn } from '../../_lib/db';
-import { requireSession, requireMember, requireRole, sendError, HttpError, type EngagementRole } from '../../_lib/authz';
+import { getSql, type SqlFn } from '../../lib/db';
+import { requireSession, requireMember, requireRole, sendError, HttpError, type EngagementRole } from '../../lib/authz';
 
 const VALID_ROLES: EngagementRole[] = ['owner', 'reviewer', 'viewer'];
 const INVITE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days

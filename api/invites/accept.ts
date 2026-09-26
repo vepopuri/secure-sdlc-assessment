@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createHash } from 'node:crypto';
-import { getSql } from '../_lib/db';
-import { requireSession, sendError, HttpError } from '../_lib/authz';
+import { getSql } from '../lib/db';
+import { requireSession, sendError, HttpError } from '../lib/authz';
 
 interface AcceptBody {
   token?: string;
