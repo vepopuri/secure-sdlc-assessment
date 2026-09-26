@@ -189,6 +189,56 @@ framework's full catalog for anything the keywords missed, and only
 clicking "Finalize scope" merges the reviewed set into that framework's
 `ScopeSelection`.
 
+### Assistant auto-suggest (`src/utils/autoAssess.ts`)
+
+`autoAssessControl(control, linkedEvidence)` is a pure, offline heuristic
+(no backend, no AI call) that drafts a rating and notes for one control
+from whatever evidence is currently linked to it: no evidence gives a
+draft rating of 0 with notes prompting the reviewer to request
+documentation or schedule an interview; evidence with no keyword overlap
+against the control's name/description/question gives a 1; one matching
+item or one matched keyword gives a 2; broader evidence and keyword
+overlap gives a 3. The result is never applied silently: the Assessment
+Workspace's "Auto-suggest" button (per control) and "Auto-suggest all"
+button (per framework, skipping any control a reviewer has already rated
+by hand) call it, mark the observation `autoSuggested: true`, and show a
+"Suggested, needs review" chip in the control list and detail panel.
+Changing the rating or notes yourself clears that flag, so a "Suggested"
+badge always means "not yet reviewed by a person," never "final."
+
+### Engagement report and export (`src/utils/report.ts`, `src/pages/ReportsPage.tsx`)
+
+Reports now leads with a cross-framework "engagement report" (computed
+once across every in-scope framework, independent of which framework tab
+is selected), before the existing per-framework maturity chart and gap
+table:
+
+- **Executive summary**: a templated paragraph (`buildExecutiveSummary`)
+  stating coverage, percent rated, average maturity, and the worst gap;
+  an optional free-text box lets the reviewer add their own framing
+  sentence (audience, purpose), inserted into the paragraph rather than
+  replacing it.
+- **Maturity score vs. peer benchmark**: your average per framework next
+  to a benchmark value the reviewer types in themselves. The app has no
+  real peer dataset, so it never fabricates one; the caption says so
+  explicitly, and an unset benchmark reads "Not set" rather than a
+  invented number.
+- **Key gaps**: `aggregateTopGaps` merges each framework's `topGaps` into
+  one worst-first list.
+- **Key recommendations and roadmap**: `buildRoadmap` buckets those gaps
+  into "Now," "Next," and "Later" by current rating.
+- **Detailed observations**: a collapsed-by-default accordion per
+  framework listing every in-scope control with its question, notes, and
+  linked evidence titles, regardless of whether it's been rated yet.
+
+**Export**: "Copy report as text" (`buildReportText`) assembles every
+section above, for every in-scope framework, into one plain-text document
+on the clipboard, portable to email, Word, or Slack. "Print / save as PDF"
+calls `window.print()`; a `.no-print` class (`src/index.css`, applied to
+the nav bar in `Layout.tsx` and to the story box, peer inputs, and tabs in
+`ReportsPage.tsx`) hides everything that isn't part of the report itself
+in the printed output.
+
 ### Charts (`src/components/MaturityBarChart.tsx`)
 
 A plain SVG horizontal bar chart: one bar per function/category, length =

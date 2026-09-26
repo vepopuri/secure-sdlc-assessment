@@ -32,11 +32,13 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { frameworks } from '../data/frameworks';
 import { useAppData } from '../context/useAppData';
 import type { Control, Evidence, MaturityRating, ObservationStatus } from '../types';
 import { MATURITY_LABELS } from '../types';
 import { applyScope, includedControlIdsFor } from '../utils/scope';
+import { autoAssessControl } from '../utils/autoAssess';
 
 const STATUS_ICONS: Record<ObservationStatus, React.ElementType> = {
   'not-started': RadioButtonUncheckedIcon,
@@ -59,6 +61,8 @@ const STATUS_OPTIONS: { value: ObservationStatus; label: string }[] = [
 export function AssessmentPage() {
   const { getObservation, upsertObservation, evidence, scope, scopeDocument } = useAppData();
   const [copied, setCopied] = useState(false);
+  const [assessing, setAssessing] = useState(false);
+  const [assistMessage, setAssistMessage] = useState<string | null>(null);
   const [frameworkIndex, setFrameworkIndex] = useState(0);
   const rawFramework = frameworks[frameworkIndex];
   const framework = applyScope(rawFramework, includedControlIdsFor(scope, rawFramework.id));
@@ -106,12 +110,67 @@ export function AssessmentPage() {
       controlId: selected.control.id,
       rating,
       status: observation?.status === 'not-started' || !observation ? 'in-progress' : observation.status,
+      autoSuggested: false,
     });
   }
 
   function handleNotesBlur() {
     if (!selected) return;
-    upsertObservation({ frameworkId: framework.id, controlId: selected.control.id, notes: notesDraft });
+    if (notesDraft === (observation?.notes ?? '')) return;
+    upsertObservation({
+      frameworkId: framework.id,
+      controlId: selected.control.id,
+      notes: notesDraft,
+      autoSuggested: false,
+    });
+  }
+
+  function linkedEvidenceFor(obs: { evidenceLinks: { evidenceId: string }[] } | undefined): Evidence[] {
+    const ids = new Set((obs?.evidenceLinks ?? []).map((link) => link.evidenceId));
+    return evidence.filter((item) => ids.has(item.id));
+  }
+
+  function handleAutoSuggest() {
+    if (!selected) return;
+    const result = autoAssessControl(selected.control, linkedEvidenceFor(observation));
+    upsertObservation({
+      frameworkId: framework.id,
+      controlId: selected.control.id,
+      rating: result.rating,
+      notes: result.notes,
+      autoSuggested: true,
+      status: observation?.status === 'not-started' || !observation ? 'in-progress' : observation.status,
+    });
+    setNotesDraft(result.notes);
+    setAssistMessage('Suggested rating and notes applied. Review and adjust before finalizing.');
+  }
+
+  async function handleAutoAssessAll() {
+    setAssessing(true);
+    let appliedCount = 0;
+    for (const fn of framework.functions) {
+      for (const control of fn.controls) {
+        const existing = getObservation(framework.id, control.id);
+        // Never overwrite a rating a reviewer has already confirmed by hand.
+        if (existing && existing.rating !== null && !existing.autoSuggested) continue;
+        const result = autoAssessControl(control, linkedEvidenceFor(existing));
+        await upsertObservation({
+          frameworkId: framework.id,
+          controlId: control.id,
+          rating: result.rating,
+          notes: result.notes,
+          autoSuggested: true,
+          status: existing?.status === 'not-started' || !existing ? 'in-progress' : existing.status,
+        });
+        appliedCount += 1;
+      }
+    }
+    setAssessing(false);
+    setAssistMessage(
+      appliedCount > 0
+        ? `Suggested ratings applied to ${appliedCount} control(s). Review each one and adjust before finalizing.`
+        : 'Every control already has a confirmed rating. Nothing to suggest.',
+    );
   }
 
   function handleAddEvidenceLink(item: Evidence) {
@@ -222,6 +281,18 @@ export function AssessmentPage() {
         ))}
       </Tabs>
 
+      <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<AutoAwesomeIcon />}
+          onClick={handleAutoAssessAll}
+          disabled={assessing || framework.functions.length === 0}
+        >
+          {assessing ? 'Suggesting...' : `Auto-suggest all for ${framework.shortName}`}
+        </Button>
+      </Stack>
+
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 6 }}>
           <Paper variant="outlined" sx={{ maxHeight: 640, overflowY: 'auto' }}>
@@ -246,6 +317,7 @@ export function AssessmentPage() {
                     {fn.controls.map((control) => {
                       const status = statusFor(control);
                       const StatusIcon = STATUS_ICONS[status];
+                      const isSuggested = Boolean(getObservation(framework.id, control.id)?.autoSuggested);
                       return (
                         <ListItemButton
                           key={control.id}
@@ -259,6 +331,14 @@ export function AssessmentPage() {
                             primary={`${control.code}: ${control.name}`}
                             slotProps={{ primary: { variant: 'body2' } }}
                           />
+                          {isSuggested && (
+                            <Chip
+                              size="small"
+                              variant="outlined"
+                              label="Suggested"
+                              sx={{ ml: 1, flexShrink: 0, color: '#00A3E0', borderColor: '#00A3E0' }}
+                            />
+                          )}
                         </ListItemButton>
                       );
                     })}
@@ -331,9 +411,17 @@ export function AssessmentPage() {
                 ))}
               </ToggleButtonGroup>
 
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                Maturity rating
-              </Typography>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography variant="subtitle2">Maturity rating</Typography>
+                  {observation?.autoSuggested && (
+                    <Chip size="small" variant="outlined" label="Suggested, needs review" sx={{ color: '#00A3E0', borderColor: '#00A3E0' }} />
+                  )}
+                </Stack>
+                <Button size="small" startIcon={<AutoAwesomeIcon />} onClick={handleAutoSuggest}>
+                  Auto-suggest
+                </Button>
+              </Stack>
               <ToggleButtonGroup
                 exclusive
                 value={observation?.rating ?? null}
@@ -420,6 +508,12 @@ export function AssessmentPage() {
       <Snackbar open={copied} autoHideDuration={2000} onClose={() => setCopied(false)}>
         <Alert severity="success" variant="filled" onClose={() => setCopied(false)}>
           Copied to clipboard
+        </Alert>
+      </Snackbar>
+
+      <Snackbar open={assistMessage !== null} autoHideDuration={4000} onClose={() => setAssistMessage(null)}>
+        <Alert severity="info" variant="filled" onClose={() => setAssistMessage(null)}>
+          {assistMessage}
         </Alert>
       </Snackbar>
     </Box>

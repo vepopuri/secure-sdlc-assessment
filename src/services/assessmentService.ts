@@ -33,6 +33,7 @@ export interface UpsertObservationInput {
   rating?: MaturityRating | null;
   notes?: string;
   evidenceLinks?: EvidenceLink[];
+  autoSuggested?: boolean;
 }
 
 /** Merges the given fields into the existing observation (or creates one) and persists it. */
@@ -48,6 +49,7 @@ export async function upsert(input: UpsertObservationInput): Promise<Observation
     rating: input.rating !== undefined ? input.rating : (existing?.rating ?? null),
     notes: input.notes !== undefined ? input.notes : (existing?.notes ?? ''),
     evidenceLinks: input.evidenceLinks !== undefined ? input.evidenceLinks : (existing?.evidenceLinks ?? []),
+    autoSuggested: input.autoSuggested !== undefined ? input.autoSuggested : (existing?.autoSuggested ?? false),
     updatedAt: new Date().toISOString(),
   };
   upsertItem(COLLECTION_KEY, merged);

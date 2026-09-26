@@ -27,7 +27,7 @@ const MIN_TOKEN_LENGTH = 5;
  * single generic word matching by coincidence isn't a strong enough signal. */
 const MIN_MATCHES = 2;
 
-function tokenize(text: string): string[] {
+export function tokenize(text: string): string[] {
   const words = text
     .toLowerCase()
     .split(/[^a-z0-9]+/)

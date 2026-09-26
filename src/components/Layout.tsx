@@ -37,9 +37,9 @@ export function Layout() {
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Deloitte brand signature: 4px green top bar */}
-      <Box sx={{ height: 4, background: 'linear-gradient(90deg, #86BC25, #86EB22)' }} />
+      <Box className="no-print" sx={{ height: 4, background: 'linear-gradient(90deg, #86BC25, #86EB22)' }} />
       {/* Dark professional header, per Deloitte's dark-theme guidance (neon green on dark) */}
-      <AppBar position="static" elevation={0} sx={{ bgcolor: DARK_SURFACE }}>
+      <AppBar position="static" elevation={0} className="no-print" sx={{ bgcolor: DARK_SURFACE }}>
         <Toolbar sx={{ gap: 2 }}>
           <BrandMark />
           <Typography variant="h6" component="div" sx={{ fontWeight: 700, mr: 3, color: '#FFFFFF' }}>

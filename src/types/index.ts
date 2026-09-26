@@ -56,6 +56,8 @@ export interface Observation {
   rating: MaturityRating | null;
   notes: string;
   evidenceLinks: EvidenceLink[];
+  /** True while the rating/notes are still an unreviewed assistant suggestion, cleared as soon as a reviewer edits either. */
+  autoSuggested?: boolean;
   updatedAt: string; // ISO timestamp
 }
 
