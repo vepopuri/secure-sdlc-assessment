@@ -33,9 +33,12 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PrintIcon from '@mui/icons-material/Print';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import CircularProgress from '@mui/material/CircularProgress';
 import { frameworks } from '../data/frameworks';
 import { useAppData } from '../context/useAppData';
-import { scoreFramework, topGaps } from '../utils/scoring';
+import { scoreFramework, topGaps, overallAverageRating } from '../utils/scoring';
 import { applyScope, includedControlIdsFor } from '../utils/scope';
 import { aggregateTopGaps, buildExecutiveSummary, buildReportText, buildRoadmap } from '../utils/report';
 import type { DetailedObservationGroup, RoadmapPhase } from '../utils/report';
@@ -85,6 +88,9 @@ export function ReportsPage() {
   const [pptxDialogOpen, setPptxDialogOpen] = useState(false);
   const [pptxOptions, setPptxOptions] = useState<PptxExportOptions>(DEFAULT_PPTX_OPTIONS);
   const [pptxGenerating, setPptxGenerating] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   if (loading) return null;
 
@@ -104,7 +110,39 @@ export function ReportsPage() {
   }));
   const aggregatedGaps = aggregateTopGaps(scopedFrameworks, observations, 10);
   const executiveSummary = buildExecutiveSummary({ frameworkScores, gaps: aggregatedGaps, story });
+  const displayedSummary = aiSummary ?? executiveSummary;
   const roadmap = buildRoadmap(aggregatedGaps);
+
+  async function handleGenerateAiSummary() {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const totalControls = frameworkScores.reduce((sum, fs) => sum + fs.totalCount, 0);
+      const ratedControls = frameworkScores.reduce((sum, fs) => sum + fs.ratedCount, 0);
+      const response = await fetch('/api/generate-report', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          frameworkNames: frameworkScores.map((fs) => fs.shortName),
+          totalControls,
+          ratedControls,
+          averageMaturity: Number(overallAverageRating(frameworkScores).toFixed(2)),
+          topGaps: aggregatedGaps.map((g) => ({ framework: g.frameworkShortName, code: g.controlCode, name: g.controlName, rating: g.rating })),
+          reviewerContext: story,
+        }),
+      });
+      const data = (await response.json()) as { executiveSummary?: string; error?: string };
+      if (!response.ok || !data.executiveSummary) {
+        setAiError(data.error ?? 'The AI service did not return a summary.');
+        return;
+      }
+      setAiSummary(data.executiveSummary);
+    } catch {
+      setAiError('Could not reach the AI service. Check your connection and try again.');
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   const peerRows = frameworkScores.map((fs) => {
     const raw = peerInputs[fs.frameworkId];
@@ -140,7 +178,7 @@ export function ReportsPage() {
   async function handleCopyReport() {
     const text = buildReportText({
       title: 'Secure SDLC Assessment Report',
-      executiveSummary,
+      executiveSummary: displayedSummary,
       peerRows,
       gaps: aggregatedGaps,
       roadmap,
@@ -160,7 +198,7 @@ export function ReportsPage() {
       await exportEngagementPptx({
         options: pptxOptions,
         scopeDocument,
-        executiveSummary,
+        executiveSummary: displayedSummary,
         peerRows,
         aggregatedGaps,
         roadmap,
@@ -217,10 +255,39 @@ export function ReportsPage() {
           onChange={(e) => setStory(e.target.value)}
           sx={{ mb: 0.5 }}
         />
-        <Typography variant="caption" color="text.secondary" className="no-print" sx={{ display: 'block', mb: 2 }}>
-          This text is inserted into the summary exactly as typed. There is no AI rewriting it.
+        <Typography variant="caption" color="text.secondary" className="no-print" sx={{ display: 'block', mb: 1.5 }}>
+          In the template summary below, this text is inserted exactly as typed. If you generate with AI instead, it's
+          used as background context and the AI writes the full paragraph.
         </Typography>
-        <Typography variant="body2">{executiveSummary}</Typography>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" rowGap={1} className="no-print" sx={{ mb: 1.5 }}>
+          <Box>
+            {aiSummary && (
+              <Chip size="small" icon={<AutoAwesomeIcon />} label="AI-generated, review before using" color="primary" variant="outlined" />
+            )}
+          </Box>
+          <Stack direction="row" spacing={1}>
+            {aiSummary && (
+              <Button size="small" startIcon={<RestartAltIcon />} onClick={() => { setAiSummary(null); setAiError(null); }}>
+                Revert to template
+              </Button>
+            )}
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={aiLoading ? <CircularProgress size={16} /> : <AutoAwesomeIcon />}
+              disabled={aiLoading}
+              onClick={handleGenerateAiSummary}
+            >
+              {aiLoading ? 'Generating...' : aiSummary ? 'Regenerate with AI' : 'Generate with AI'}
+            </Button>
+          </Stack>
+        </Stack>
+        {aiError && (
+          <Alert severity="warning" className="no-print" sx={{ mb: 1.5 }} onClose={() => setAiError(null)}>
+            {aiError}
+          </Alert>
+        )}
+        <Typography variant="body2">{displayedSummary}</Typography>
       </Paper>
 
       <Paper variant="outlined" sx={{ p: 2.5, mb: 3 }}>

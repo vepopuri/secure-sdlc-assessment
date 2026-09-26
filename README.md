@@ -5,9 +5,13 @@ multiple frameworks (OWASP SAMM v2, NIST CSF 2.0, NIST SSDF SP 800-218) on a
 single normalized 0–3 maturity scale, with an evidence library to back up
 findings and a dashboard/report view for cross-framework reporting.
 
-There is no backend yet. Everything is persisted client-side (localStorage +
-IndexedDB) behind a service layer that is designed to be swapped for a real
-API later without touching any page.
+All assessment data is persisted client-side (localStorage + IndexedDB) behind
+a service layer that is designed to be swapped for a real API later without
+touching any page. The one deliberate exception is `api/generate-report.ts`,
+a small Vercel serverless function that lets Reports draft the executive
+summary with a real AI call instead of the offline template (see below) —
+it's the only place in this project that holds a secret, and the rest of the
+app never depends on it being configured.
 
 ## Running it
 
@@ -228,6 +232,28 @@ calls `window.print()`; a `.no-print` class (`src/index.css`, applied to
 the nav bar in `Layout.tsx` and to the story box, peer inputs, and tabs in
 `ReportsPage.tsx`) hides everything that isn't part of the report itself
 in the printed output.
+
+### AI-generated executive summary (`api/generate-report.ts`)
+
+"Generate with AI" (next to the executive summary on Reports) calls a small
+Vercel serverless function that sends a compact, pre-aggregated snapshot of
+real scoring data (frameworks assessed, total/rated control counts, average
+maturity, the top gaps, and whatever the reviewer typed into "Add your own
+context") to Claude (`claude-sonnet-5`) and returns a genuinely AI-drafted
+executive summary paragraph, replacing the offline template until reverted.
+It never sends raw evidence files, the full observation set, or anything
+beyond that snapshot.
+
+This requires an `ANTHROPIC_API_KEY` environment variable set on the Vercel
+project (Project Settings → Environment Variables), then a redeploy; without
+it, the endpoint responds with a clear, non-crashing error and the page falls
+back to the template summary, so the rest of the app works identically either
+way. The key lives only in `api/generate-report.ts`'s server-side environment
+and is never exposed to the browser. Because the endpoint is otherwise
+unauthenticated, anyone who can reach the deployed URL can trigger a
+(rate/cost-bounded, `max_tokens: 700`) call on that key; add your own auth in
+front of it (e.g. Vercel deployment protection) if that's a concern for your
+deployment.
 
 ### PowerPoint export (`src/utils/pptxExport.ts`, `src/utils/reportSections.ts`)
 
