@@ -197,6 +197,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return await handleVerifyEmail(req, res);
       case 'resend-verification':
         return await handleResendVerification(req, res);
+      case 'debug-config':
+        // TEMP DEBUG: booleans only, never the actual values -- remove after checking.
+        res.status(200).json({
+          hasResendApiKey: !!process.env.RESEND_API_KEY,
+          hasEmailFrom: !!process.env.EMAIL_FROM,
+          hasAppBaseUrl: !!process.env.APP_BASE_URL,
+          hasDatabaseUrl: !!(process.env.DATABASE_URL ?? process.env.POSTGRES_URL),
+        });
+        return;
       default:
         res.status(404).json({ error: 'Not found.' });
     }
