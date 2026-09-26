@@ -1,13 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { PING } from '../../lib/ping';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const action = req.query.action;
   if (action === 'session') {
     res.status(200).json({
-      debug: 'ping-lib-import-isolation-test',
+      debug: 'zero-relative-imports-inline-constant',
       nodeVersion: process.version,
-      ping: PING,
+      ping: 'pong',
     });
     return;
   }
