@@ -209,40 +209,18 @@ typography. Colors and typography live in `src/theme.ts` (MUI theme) and
 `src/components/Layout.tsx` (header), plus `index.html` (font loading) and
 `src/index.css` (page background).
 
-### Home hero illustration (`src/components/WorkflowIllustration.tsx`)
+### Home hero and step cards (`src/pages/HomePage.tsx`)
 
-Eight hand-drawn flat-style figures (each plain inline SVG, no image
-assets) — one per engagement stage — sit in the Home hero between the
-summary copy and the CTA buttons, each boxed in its own bordered card so
-the stage reads as a distinct step: a kickoff figure holding up an
-engagement card, a scope figure checking off a clipboard, a
-document-collection figure with a calendar and folder, a documentation-
-review figure checking off a checklist, an interview figure reaching
-toward a stakeholder, a validation figure with a verified shield, a report
-figure presenting a small chart, and a finalize figure raising a trophy.
-Each card also carries a small floating cluster of two supporting
-Material icon badges (e.g. a handshake + calendar-check for Kickoff) so
-every stage reads with more than one visual cue, in the spirit of a
-professionally illustrated workflow diagram, with a dashed connector
-linking the cards in sequence. A caption below each card names the stage,
-centered to match the hero's overall text alignment. On narrow screens
-the row scrolls horizontally rather than shrinking the figures illegibly.
-It's purely decorative — it carries no state and duplicates no progress
-tracking — styled after a reference workflow-diagram illustration but
-using the app's own brand colors instead of introducing new ones.
-
-### Live snapshot stats and step cards (`src/pages/HomePage.tsx`)
-
-Below the CTA buttons, a row of four stat tiles (`StatTile`) reports real
-numbers pulled live from `AppDataContext` via `scoreFramework`/
-`overallAverageRating` — controls in scope, percent assessed, evidence
-collected, and average maturity — never placeholder figures. Each tile
-lifts slightly and picks up an accent border on hover. Beneath the hero,
-four `StepCard` tiles ("Scope & plan", "Collect evidence", "Assess &
-score", "Report & present") mirror the engagement phases as clickable,
-hover-elevating cards that route to the relevant page (or scroll to the
-scope section on the same page) — a Snyk-style modular card grid restyled
-in the app's own Deloitte palette rather than introducing new colors.
+The hero stays deliberately simple — title, one summary paragraph, and the
+two primary CTAs — so the page reads as clean rather than crowded. Right
+below it, "Where would you like to start?" introduces four `StepCard`
+tiles ("Scope & plan", "Collect evidence", "Assess & score", "Report &
+present") that mirror the engagement phases as clickable, hover-elevating
+cards: each lifts, gains an accent border, and reveals a sliding arrow on
+hover, then routes to the relevant page (or scrolls to the scope section
+on the same page) on click. It's the page's main interactive, inviting
+surface — a modular card grid restyled in the app's own Deloitte palette
+rather than a decorative illustration or a metrics readout.
 
 
 ## Project layout
@@ -257,7 +235,7 @@ src/
   utils/scoring.ts     pure scoring functions used by Reports
   utils/scope.ts       pure scope-filtering functions shared by Home/Assessment/Reports
   utils/suggest.ts     pure keyword control-suggestion function used on Home
-  components/          shared UI (Layout, MaturityBarChart, WorkflowIllustration, evidence/scope dialogs)
+  components/          shared UI (Layout, MaturityBarChart, evidence/scope dialogs)
   pages/               HomePage, AssessmentPage, EvidencePage, ReportsPage
 ```
 
