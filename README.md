@@ -200,7 +200,13 @@ has `kind: 'interview-note'`; "Process Data & Validate" is done once any
 observation has a rating) — never fabricated progress. The first not-done
 stage in order is "current" and gets the glow; nothing before it is ever
 un-done once its underlying data exists, since these are one-way signals
-(you can't accidentally "undo" having entered a review level).
+(you can't accidentally "undo" having entered a review level). The three
+people-facing stages (Kickoff, Document Collection & Meeting Scheduling,
+Interviews) render a small illustrated figure with a task-specific prop
+(a handshake, a calendar, a speech bubble) instead of a plain icon, and a
+faint scattering of dashed-flowchart shapes runs behind the whole row —
+both purely decorative, styled after a workflow-diagram illustration
+reference, using only the app's existing brand palette.
 
 ### Charts (`src/components/MaturityBarChart.tsx`)
 
