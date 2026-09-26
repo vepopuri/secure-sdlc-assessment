@@ -7,6 +7,8 @@ import { RequireAuth } from './routes/RequireAuth';
 import { Layout } from './components/Layout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { SignupPage } from './pages/auth/SignupPage';
+import { CheckEmailPage } from './pages/auth/CheckEmailPage';
+import { VerifyEmailPage } from './pages/auth/VerifyEmailPage';
 import { HomePage } from './pages/HomePage';
 import { AssessmentPage } from './pages/AssessmentPage';
 import { EvidencePage } from './pages/EvidencePage';
@@ -22,6 +24,8 @@ function App() {
             <Routes>
               <Route path="login" element={<LoginPage />} />
               <Route path="signup" element={<SignupPage />} />
+              <Route path="check-email" element={<CheckEmailPage />} />
+              <Route path="verify-email" element={<VerifyEmailPage />} />
               <Route element={<RequireAuth />}>
                 <Route element={<Layout />}>
                   <Route index element={<HomePage />} />

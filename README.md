@@ -48,16 +48,31 @@ client-side** for now; this phase only gets accounts and roles working end
 to end. A later phase reimplements the services layer against the API so
 engagement data is actually shared between members.
 
-- **Schema** (`db/migrations/0001_init.sql`): `users`, `sessions`,
-  `magic_link_tokens` (schema only — no magic-link endpoints yet),
-  `engagements`, `engagement_members` (role: `owner` / `reviewer` /
-  `viewer`), `engagement_invites`.
+- **Schema** (`db/migrations/`): `users` (with `email_verified_at`),
+  `sessions`, `magic_link_tokens` (schema only — no magic-link endpoints
+  yet), `engagements`, `engagement_members` (role: `owner` / `reviewer` /
+  `viewer`), `engagement_invites`, `email_verification_tokens`.
 - **Sessions** are DB-backed opaque tokens, not JWT: the raw token lives
   only in an httpOnly cookie, its SHA-256 hash in the `sessions` table.
   This makes membership/role changes revocable immediately — a stateless
-  JWT can't do that without reinventing a session table anyway.
+  JWT can't do that without reinventing a session table anyway. Cookie
+  parsing/serialization is hand-rolled (`api/_lib/auth.ts`) rather than
+  using the `cookie` npm package — its v2 major dropped its CommonJS
+  entry point entirely (ESM-only), which risks an `ERR_REQUIRE_ESM` crash
+  at cold start on Vercel's Node runtime, before a function's own
+  try/catch ever runs. `package.json` also pins `"engines": {"node":
+  ">=20.0.0"}` since `@neondatabase/serverless` requires it.
 - **Passwords** are hashed with `bcryptjs` (pure JS, no native bindings —
   avoids the classic Vercel serverless build failure with native `bcrypt`).
+- **Email verification is mandatory**: signup creates the account but does
+  not sign it in — it emails a verification link (`api/_lib/email.ts`, via
+  Resend) and login is rejected with `403 EMAIL_NOT_VERIFIED` until that
+  link is clicked (`/verify-email`, `api/auth/verify-email.ts`). Requires
+  `RESEND_API_KEY` (and optionally `EMAIL_FROM`, `APP_BASE_URL` — the
+  latter falls back to `https://${VERCEL_URL}`) as Vercel environment
+  variables; without `RESEND_API_KEY` set, signup still works but no email
+  is actually sent (logged as a warning), so accounts are stuck unverified
+  until it's configured.
 - Apply migrations against your Neon database with:
   ```bash
   DATABASE_URL=<your neon connection string> npm run migrate
@@ -72,13 +87,15 @@ engagement data is actually shared between members.
 - `src/context/auth/` (`AuthContext`, `useAuth`) is a separate context from
   `AppDataContext` — different lifecycle (loads once at boot) and shape.
   It hydrates via `GET /api/auth/session` and gates the app behind
-  `src/routes/RequireAuth.tsx`; `/login` and `/signup` are the only public
-  routes.
+  `src/routes/RequireAuth.tsx`; `/login`, `/signup`, `/check-email`, and
+  `/verify-email` are the only public routes.
 
 ## Pages
 
 - **Login / Sign up** (`/login`, `/signup`) — email + password
-  authentication. Everything else below requires being signed in.
+  authentication. Signing up requires clicking a verification link sent to
+  that email (`/check-email`, `/verify-email`) before the account can sign
+  in. Everything else below requires being signed in.
 - **Home** (`/`) — a clean hero (title, one summary paragraph, two CTAs,
   an animated Deloitte-palette background, and three interactive framework
   badges) plus a "Where would you like to start?" grid of four clickable

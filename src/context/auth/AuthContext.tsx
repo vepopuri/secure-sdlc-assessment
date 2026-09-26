@@ -41,13 +41,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signup = useCallback(async (email: string, password: string, displayName: string) => {
-    const { user: createdUser } = await apiFetch<{ user: AuthUser }>('/api/auth/signup', {
+    // Deliberately does not sign the user in — no session is created until
+    // the email is verified (see verifyEmail below).
+    await apiFetch('/api/auth/signup', {
       method: 'POST',
       body: JSON.stringify({ email, password, displayName }),
     });
-    setUser(createdUser);
+  }, []);
+
+  const verifyEmail = useCallback(async (token: string) => {
+    const { user: verifiedUser } = await apiFetch<{ user: AuthUser }>('/api/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+    setUser(verifiedUser);
     setStatus('authenticated');
-    return createdUser;
+    return verifiedUser;
+  }, []);
+
+  const resendVerification = useCallback(async (email: string) => {
+    await apiFetch('/api/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
   }, []);
 
   const logout = useCallback(async () => {
@@ -57,8 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, status, login, signup, logout }),
-    [user, status, login, signup, logout],
+    () => ({ user, status, login, signup, verifyEmail, resendVerification, logout }),
+    [user, status, login, signup, verifyEmail, resendVerification, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

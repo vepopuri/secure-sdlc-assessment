@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -17,11 +20,11 @@
     "@mui/material": "^7.3.11",
     "@neondatabase/serverless": "^1.1.0",
     "bcryptjs": "^3.0.3",
-    "cookie": "^2.0.1",
     "pptxgenjs": "^4.0.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.4"
+    "react-router-dom": "^7.18.4",
+    "resend": "^6.30.0"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",

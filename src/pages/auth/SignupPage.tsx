@@ -19,7 +19,7 @@ export function SignupPage() {
     setSubmitting(true);
     try {
       await signup(email, password, displayName);
-      navigate('/', { replace: true });
+      navigate('/check-email', { replace: true, state: { email } });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
     } finally {

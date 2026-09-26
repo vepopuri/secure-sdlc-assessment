@@ -11,9 +11,11 @@ export type EngagementRole = 'owner' | 'reviewer' | 'viewer';
 
 export class HttpError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  code?: string;
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -45,7 +47,7 @@ export async function requireRole(
 
 export function sendError(res: VercelResponse, err: unknown): void {
   if (err instanceof HttpError) {
-    res.status(err.status).json({ error: err.message });
+    res.status(err.status).json({ error: err.message, code: err.code });
     return;
   }
   console.error(err);

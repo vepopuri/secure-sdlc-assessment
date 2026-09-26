@@ -1,6 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getSql } from '../_lib/db';
-import { hashPassword, createSession, setSessionCookie } from '../_lib/auth';
+import { hashPassword } from '../_lib/auth';
+import { createVerificationToken } from '../_lib/verification';
+import { sendVerificationEmail } from '../_lib/email';
 import { sendError, HttpError } from '../_lib/authz';
 
 interface SignupBody {
@@ -37,11 +39,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
     const user = rows[0] as { id: string; email: string; displayName: string };
 
-    const userAgent = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined;
-    const token = await createSession(user.id, userAgent);
-    setSessionCookie(res, token);
+    // No session is created here on purpose: the account can't be signed
+    // into until the email is verified (see api/auth/verify-email.ts).
+    const verificationToken = await createVerificationToken(user.id);
+    await sendVerificationEmail(user.email, verificationToken);
 
-    res.status(201).json({ user });
+    res.status(201).json({ status: 'verification-required', email: user.email });
   } catch (err) {
     sendError(res, err);
   }

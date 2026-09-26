@@ -22,15 +22,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const sql = getSql();
     const rows = await sql`
-      select id, email, password_hash as "passwordHash", display_name as "displayName"
+      select id, email, password_hash as "passwordHash", display_name as "displayName", email_verified_at as "emailVerifiedAt"
       from users where lower(email) = ${email} limit 1
     `;
-    const user = rows[0] as { id: string; email: string; passwordHash: string | null; displayName: string } | undefined;
+    const user = rows[0] as
+      | { id: string; email: string; passwordHash: string | null; displayName: string; emailVerifiedAt: string | null }
+      | undefined;
 
     // Deliberately identical error for "no such user" and "wrong password" —
     // never reveal which one was wrong.
     if (!user || !user.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
       throw new HttpError(401, 'Invalid email or password.');
+    }
+
+    if (!user.emailVerifiedAt) {
+      throw new HttpError(403, 'Please verify your email before signing in.', 'EMAIL_NOT_VERIFIED');
     }
 
     const userAgent = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined;

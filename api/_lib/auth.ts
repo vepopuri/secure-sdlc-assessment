@@ -4,7 +4,6 @@
 // hash, never the token itself.
 
 import { randomBytes, createHash } from 'node:crypto';
-import { parseCookie, stringifySetCookie } from 'cookie';
 import bcrypt from 'bcryptjs';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getSql } from './db';
@@ -12,6 +11,35 @@ import { getSql } from './db';
 export const SESSION_COOKIE_NAME = 'ssdlc_session';
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const BCRYPT_COST = 12;
+
+// Hand-rolled instead of pulling in the `cookie` package: v2 of that package
+// dropped its CommonJS entry point entirely (ESM-only), which risks an
+// ERR_REQUIRE_ESM crash at cold start if Vercel's function builder ever
+// loads the bundle as CJS — a crash that happens before our own handler
+// (and its try/catch) even runs. This is simple enough not to need a
+// dependency at all.
+function parseCookieHeader(header: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const part of header.split(';')) {
+    const eq = part.indexOf('=');
+    if (eq === -1) continue;
+    const key = part.slice(0, eq).trim();
+    if (!key) continue;
+    const value = part.slice(eq + 1).trim();
+    try {
+      out[key] = decodeURIComponent(value);
+    } catch {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+function serializeSessionCookie(value: string, maxAgeSeconds: number): string {
+  const attrs = [`${SESSION_COOKIE_NAME}=${encodeURIComponent(value)}`, 'Path=/', `Max-Age=${maxAgeSeconds}`, 'HttpOnly', 'SameSite=Lax'];
+  if (process.env.NODE_ENV === 'production') attrs.push('Secure');
+  return attrs.join('; ');
+}
 
 export interface SessionUser {
   id: string;
@@ -34,38 +62,16 @@ function hashToken(token: string): string {
 function readSessionToken(req: VercelRequest): string | null {
   const header = req.headers.cookie;
   if (!header) return null;
-  const cookies = parseCookie(header);
+  const cookies = parseCookieHeader(header);
   return cookies[SESSION_COOKIE_NAME] ?? null;
 }
 
 export function setSessionCookie(res: VercelResponse, token: string): void {
-  res.setHeader(
-    'Set-Cookie',
-    stringifySetCookie({
-      name: SESSION_COOKIE_NAME,
-      value: token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: SESSION_DURATION_MS / 1000,
-    }),
-  );
+  res.setHeader('Set-Cookie', serializeSessionCookie(token, SESSION_DURATION_MS / 1000));
 }
 
 export function clearSessionCookie(res: VercelResponse): void {
-  res.setHeader(
-    'Set-Cookie',
-    stringifySetCookie({
-      name: SESSION_COOKIE_NAME,
-      value: '',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 0,
-    }),
-  );
+  res.setHeader('Set-Cookie', serializeSessionCookie('', 0));
 }
 
 export async function createSession(userId: string, userAgent: string | undefined): Promise<string> {

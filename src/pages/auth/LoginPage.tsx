@@ -5,12 +5,14 @@ import { useAuth } from '../../context/auth/useAuth';
 import { ApiError } from '../../services/apiClient';
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, resendVerification } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resent, setResent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/';
@@ -18,15 +20,25 @@ export function LoginPage() {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
+    setNeedsVerification(false);
+    setResent(false);
     setSubmitting(true);
     try {
       await login(email, password);
       navigate(from, { replace: true });
     } catch (err) {
+      if (err instanceof ApiError && err.code === 'EMAIL_NOT_VERIFIED') {
+        setNeedsVerification(true);
+      }
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleResend() {
+    await resendVerification(email);
+    setResent(true);
   }
 
   return (
@@ -50,7 +62,20 @@ export function LoginPage() {
 
         <Box component="form" onSubmit={handleSubmit}>
           <Stack spacing={2}>
-            {error && <Alert severity="error">{error}</Alert>}
+            {error && (
+              <Alert
+                severity="error"
+                action={
+                  needsVerification && !resent ? (
+                    <Button color="inherit" size="small" onClick={handleResend}>
+                      Resend
+                    </Button>
+                  ) : undefined
+                }
+              >
+                {resent ? 'Verification email sent again. Check your inbox.' : error}
+              </Alert>
+            )}
             <TextField
               label="Email"
               type="email"
