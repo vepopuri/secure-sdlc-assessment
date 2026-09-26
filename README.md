@@ -67,12 +67,25 @@ engagement data is actually shared between members.
 - **Email verification is mandatory**: signup creates the account but does
   not sign it in — it emails a verification link (`api/_lib/email.ts`, via
   Resend) and login is rejected with `403 EMAIL_NOT_VERIFIED` until that
-  link is clicked (`/verify-email`, `api/auth/verify-email.ts`). Requires
-  `RESEND_API_KEY` (and optionally `EMAIL_FROM`, `APP_BASE_URL` — the
-  latter falls back to `https://${VERCEL_URL}`) as Vercel environment
+  link is clicked (`/verify-email` page, `verify-email` action below).
+  Requires `RESEND_API_KEY` (and optionally `EMAIL_FROM`, `APP_BASE_URL` —
+  the latter falls back to `https://${VERCEL_URL}`) as Vercel environment
   variables; without `RESEND_API_KEY` set, signup still works but no email
   is actually sent (logged as a warning), so accounts are stuck unverified
   until it's configured.
+- **All auth endpoints are one function, `api/auth/[action].ts`** (a
+  dynamic route: `req.query.action` picks `signup` / `login` / `logout` /
+  `session` / `verify-email` / `resend-verification` — the URLs the
+  frontend calls are unchanged), and **all engagement endpoints are one
+  function, `api/engagements/[...segments].ts`** (a catch-all route). This
+  is deliberate, not just tidiness: this project is on Vercel's **Hobby
+  plan, which caps a deployment at 12 Serverless Functions** — splitting
+  every endpoint into its own file hit that limit almost immediately
+  (crashing with a bare `FUNCTION_INVOCATION_FAILED`, or silently failing
+  to deploy at all past the 12th), which is why the project currently has
+  only 4 real functions total (those two, `api/generate-report.ts`, and
+  `api/invites/accept.ts`) with plenty of headroom for whatever's added
+  next.
 - Apply migrations against your Neon database with:
   ```bash
   DATABASE_URL=<your neon connection string> npm run migrate
