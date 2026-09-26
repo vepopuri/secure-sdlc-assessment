@@ -1,28 +1,20 @@
 import { useState } from 'react';
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Alert,
   Autocomplete,
   Box,
   Button,
-  Checkbox,
   Chip,
-  FormControlLabel,
   Grid,
   Paper,
   Snackbar,
   Stack,
-  Tab,
-  Tabs,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
@@ -33,7 +25,6 @@ import VerifiedIcon from '@mui/icons-material/Verified';
 import SummarizeIcon from '@mui/icons-material/Summarize';
 import { frameworks, allControlIds } from '../data/frameworks';
 import { useAppData } from '../context/useAppData';
-import { includedControlIdsFor } from '../utils/scope';
 import { formatBytes } from '../utils/formatBytes';
 import { SuggestControlsDialog } from '../components/scope/SuggestControlsDialog';
 import type { ReviewLevel } from '../types';
@@ -66,6 +57,15 @@ const COMPLIANCE_OPTIONS = [
   'FedRAMP',
   'NIST 800-53',
   'CCPA',
+];
+
+const ACCEPTED_SCOPE_DOC_EXTENSIONS = ['.pdf', '.doc', '.docx', '.ppt', '.pptx'];
+const ACCEPTED_SCOPE_DOC_MIME = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 ];
 
 function CardHeader({ children }: { children: React.ReactNode }) {
@@ -137,10 +137,39 @@ function StepCard({ icon: Icon, color, title, description, onClick }: StepCardPr
   );
 }
 
+/** A framework badge in the hero: subtle, on-brand, and interactive rather than a static label. */
+function FrameworkBadge({ label, version, controlCount, onClick }: { label: string; version: string; controlCount: number; onClick: () => void }) {
+  return (
+    <Box
+      onClick={onClick}
+      sx={{
+        cursor: 'pointer',
+        px: 2,
+        py: 1,
+        borderRadius: 999,
+        border: '1px solid rgba(255,255,255,0.22)',
+        bgcolor: 'rgba(255,255,255,0.05)',
+        backdropFilter: 'blur(2px)',
+        transition: 'transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease',
+        '&:hover': {
+          transform: 'translateY(-2px)',
+          borderColor: '#86EB22',
+          bgcolor: 'rgba(134,235,34,0.08)',
+        },
+      }}
+    >
+      <Typography variant="body2" sx={{ fontWeight: 700, color: '#FFFFFF', lineHeight: 1.2 }}>
+        {label} <Box component="span" sx={{ fontWeight: 400, color: 'rgba(255,255,255,0.6)' }}>{version}</Box>
+      </Typography>
+      <Typography variant="caption" sx={{ color: '#86EB22' }}>
+        {controlCount} controls
+      </Typography>
+    </Box>
+  );
+}
+
 export function HomePage() {
   const {
-    scope,
-    setScopeIncluded,
     scopeDocument,
     updateScopeDocument,
     setScopeDocumentAttachment,
@@ -156,13 +185,9 @@ export function HomePage() {
     setTextDraft(scopeDocument?.text ?? '');
   }
 
-  const [frameworkIndex, setFrameworkIndex] = useState(0);
-  const framework = frameworks[frameworkIndex];
-  const allIds = allControlIds(framework);
-  const includedSet = includedControlIdsFor(scope, framework.id) ?? new Set(allIds);
-
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   function handleTextBlur() {
     if (textDraft !== (scopeDocument?.text ?? '')) {
@@ -183,12 +208,13 @@ export function HomePage() {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    await setScopeDocumentAttachment(file);
-    if ((file.type.startsWith('text/') || /\.(txt|md)$/i.test(file.name)) && !textDraft.trim()) {
-      const text = await file.text();
-      setTextDraft(text);
-      await updateScopeDocument({ text });
+    const extensionOk = ACCEPTED_SCOPE_DOC_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext));
+    const mimeOk = ACCEPTED_SCOPE_DOC_MIME.includes(file.type);
+    if (!extensionOk && !mimeOk) {
+      setFileError('Only PDF, Word (.doc, .docx), or PowerPoint (.ppt, .pptx) files are accepted.');
+      return;
     }
+    await setScopeDocumentAttachment(file);
   }
 
   async function handleDownloadAttachment() {
@@ -201,40 +227,38 @@ export function HomePage() {
     URL.revokeObjectURL(url);
   }
 
-  function toggleControl(controlId: string) {
-    const next = new Set(includedSet);
-    if (next.has(controlId)) next.delete(controlId);
-    else next.add(controlId);
-    setScopeIncluded(framework.id, Array.from(next));
-  }
-
-  function toggleFunction(functionControlIds: string[], shouldInclude: boolean) {
-    const next = new Set(includedSet);
-    for (const id of functionControlIds) {
-      if (shouldInclude) next.add(id);
-      else next.delete(id);
-    }
-    setScopeIncluded(framework.id, Array.from(next));
-  }
-
-  function selectAll() {
-    setScopeIncluded(framework.id, allIds);
-  }
-
-  function clearAll() {
-    setScopeIncluded(framework.id, []);
-  }
+  // Feed the engagement's own intake profile into the keyword suggester, in
+  // addition to the free-text description, so choosing a review level,
+  // application type, or compliance requirement actually changes which
+  // controls get suggested — not just the prose in the text box.
+  const profileTokens = [
+    scopeDocument?.reviewLevel === 'organization' ? 'organization' : scopeDocument?.reviewLevel === 'application' ? 'application' : '',
+    scopeDocument?.applicationType ?? '',
+    ...(scopeDocument?.complianceRequirements ?? []),
+  ]
+    .filter(Boolean)
+    .join('. ');
+  const effectiveScopeText = [textDraft, profileTokens].filter(Boolean).join('. ');
 
   return (
     <Box>
       <Box
         sx={{
-          bgcolor: '#282728',
-          color: '#FFFFFF',
+          position: 'relative',
+          overflow: 'hidden',
           borderRadius: 2,
-          p: { xs: 3, sm: 5 },
+          p: { xs: 3, sm: 6 },
           mb: 4,
           textAlign: 'center',
+          color: '#FFFFFF',
+          backgroundImage: 'linear-gradient(120deg, #1c2420, #282728, #123244, #282728)',
+          backgroundSize: '300% 300%',
+          animation: 'heroGradient 16s ease infinite',
+          '@keyframes heroGradient': {
+            '0%': { backgroundPosition: '0% 50%' },
+            '50%': { backgroundPosition: '100% 50%' },
+            '100%': { backgroundPosition: '0% 50%' },
+          },
         }}
       >
         <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
@@ -249,6 +273,18 @@ export function HomePage() {
           stakeholders, and score maturity across OWASP SAMM, NIST CSF, and NIST SSDF. Findings
           stay comparable, defensible, and ready to present.
         </Typography>
+
+        <Stack direction="row" spacing={1.5} justifyContent="center" flexWrap="wrap" sx={{ gap: 1.5, mb: 4 }}>
+          {frameworks.map((f) => (
+            <FrameworkBadge
+              key={f.id}
+              label={f.shortName}
+              version={f.version}
+              controlCount={allControlIds(f).length}
+              onClick={() => navigate('/assessment')}
+            />
+          ))}
+        </Stack>
 
         <Stack direction="row" spacing={1.5} justifyContent="center">
           <Button
@@ -372,6 +408,10 @@ export function HomePage() {
                 onChange={(_e, value) => updateScopeDocument({ complianceRequirements: value as string[] })}
                 renderInput={(params) => <TextField {...params} label="Compliance requirements" />}
               />
+              <Typography variant="caption" color="text.secondary">
+                These selections feed the control suggester alongside the scope description, so
+                narrowing them down changes what gets suggested.
+              </Typography>
             </Stack>
           </Paper>
         </Grid>
@@ -389,7 +429,7 @@ export function HomePage() {
                   variant="outlined"
                   startIcon={<AutoAwesomeIcon />}
                   onClick={() => setSuggestOpen(true)}
-                  disabled={!textDraft.trim()}
+                  disabled={!effectiveScopeText.trim()}
                 >
                   Suggest
                 </Button>
@@ -405,10 +445,15 @@ export function HomePage() {
               onChange={(e) => setTextDraft(e.target.value)}
               onBlur={handleTextBlur}
             />
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 2 }}>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 2 }} flexWrap="wrap" rowGap={1}>
               <Button size="small" component="label" startIcon={<UploadFileIcon />}>
                 Upload scope document
-                <input type="file" hidden onChange={handleFileInputChange} />
+                <input
+                  type="file"
+                  hidden
+                  accept={[...ACCEPTED_SCOPE_DOC_EXTENSIONS, ...ACCEPTED_SCOPE_DOC_MIME].join(',')}
+                  onChange={handleFileInputChange}
+                />
               </Button>
               {scopeDocument?.attachmentFileName && (
                 <Chip
@@ -419,100 +464,24 @@ export function HomePage() {
                 />
               )}
             </Stack>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75 }}>
+              Accepted formats: PDF, Word (.doc, .docx), or PowerPoint (.ppt, .pptx) only.
+            </Typography>
           </Paper>
         </Grid>
       </Grid>
 
-      <Tabs
-        value={frameworkIndex}
-        onChange={(_e, v) => setFrameworkIndex(v)}
-        sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
-      >
-        {frameworks.map((f) => (
-          <Tab key={f.id} label={`${f.shortName} ${f.version}`} sx={{ textTransform: 'none' }} />
-        ))}
-      </Tabs>
-
-      <Accordion disableGutters variant="outlined">
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Box>
-            <Typography variant="subtitle2">Fine-tune specific controls (optional)</Typography>
-            <Typography variant="caption" color="text.secondary">
-              {includedSet.size} / {allIds.length} controls in scope for {framework.shortName}
-            </Typography>
-          </Box>
-        </AccordionSummary>
-        <AccordionDetails sx={{ p: 0 }}>
-          <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ p: 1.5, pb: 0 }}>
-            <Button size="small" onClick={selectAll}>
-              Select all
-            </Button>
-            <Button size="small" onClick={clearAll}>
-              Clear all
-            </Button>
-          </Stack>
-          {framework.functions.map((fn) => {
-            const functionControlIds = fn.controls.map((c) => c.id);
-            const includedCount = functionControlIds.filter((id) => includedSet.has(id)).length;
-            const allIncluded = includedCount === functionControlIds.length;
-            const noneIncluded = includedCount === 0;
-            return (
-              <Accordion key={fn.id} disableGutters>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ width: '100%', pr: 2 }}>
-                    <Typography variant="subtitle2">
-                      {fn.code} · {fn.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {includedCount} / {functionControlIds.length} in scope
-                    </Typography>
-                  </Stack>
-                </AccordionSummary>
-                <AccordionDetails sx={{ pt: 0 }}>
-                  <FormControlLabel
-                    sx={{ mb: 0.5 }}
-                    control={
-                      <Checkbox
-                        size="small"
-                        checked={allIncluded}
-                        indeterminate={!allIncluded && !noneIncluded}
-                        onChange={(e) => toggleFunction(functionControlIds, e.target.checked)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    }
-                    label={<Typography variant="body2">All controls in this function</Typography>}
-                  />
-                  <Stack sx={{ pl: 2 }}>
-                    {fn.controls.map((control) => (
-                      <FormControlLabel
-                        key={control.id}
-                        control={
-                          <Checkbox
-                            size="small"
-                            checked={includedSet.has(control.id)}
-                            onChange={() => toggleControl(control.id)}
-                          />
-                        }
-                        label={
-                          <Typography variant="body2">
-                            {control.code}: {control.name}
-                          </Typography>
-                        }
-                      />
-                    ))}
-                  </Stack>
-                </AccordionDetails>
-              </Accordion>
-            );
-          })}
-        </AccordionDetails>
-      </Accordion>
-
-      <SuggestControlsDialog open={suggestOpen} onClose={() => setSuggestOpen(false)} scopeText={textDraft} />
+      <SuggestControlsDialog open={suggestOpen} onClose={() => setSuggestOpen(false)} scopeText={effectiveScopeText} />
 
       <Snackbar open={copied} autoHideDuration={2000} onClose={() => setCopied(false)}>
         <Alert severity="success" variant="filled" onClose={() => setCopied(false)}>
           Copied to clipboard
+        </Alert>
+      </Snackbar>
+
+      <Snackbar open={fileError !== null} autoHideDuration={4000} onClose={() => setFileError(null)}>
+        <Alert severity="error" variant="filled" onClose={() => setFileError(null)}>
+          {fileError}
         </Alert>
       </Snackbar>
     </Box>

@@ -142,7 +142,7 @@ export function AssessmentPage() {
       status: observation?.status === 'not-started' || !observation ? 'in-progress' : observation.status,
     });
     setNotesDraft(result.notes);
-    setAssistMessage('Suggested rating and notes applied. Review and adjust before finalizing.');
+    setAssistMessage('Suggested rating and observations applied. Review and adjust before finalizing.');
   }
 
   async function handleAutoAssessAll() {
@@ -177,14 +177,27 @@ export function AssessmentPage() {
     if (!selected) return;
     const current = observation?.evidenceLinks ?? [];
     if (current.some((link) => link.evidenceId === item.id)) return;
-    upsertObservation({
-      frameworkId: framework.id,
-      controlId: selected.control.id,
-      evidenceLinks: [...current, { evidenceId: item.id, section: '' }],
-      // Linking evidence is a concrete step toward answering the control —
-      // reflect that automatically, same as a rating does.
-      status: !observation || observation.status === 'not-started' ? 'in-progress' : observation.status,
-    });
+    const nextLinks = [...current, { evidenceId: item.id, section: '' }];
+    const status = !observation || observation.status === 'not-started' ? 'in-progress' : observation.status;
+
+    // Newly-linked evidence is exactly what the assistant needs to redraft its
+    // suggestion — but never overwrite a rating a reviewer already confirmed.
+    if (!observation || observation.rating === null || observation.autoSuggested) {
+      const linked = linkedEvidenceFor({ evidenceLinks: nextLinks });
+      const result = autoAssessControl(selected.control, linked);
+      upsertObservation({
+        frameworkId: framework.id,
+        controlId: selected.control.id,
+        evidenceLinks: nextLinks,
+        rating: result.rating,
+        notes: result.notes,
+        autoSuggested: true,
+        status,
+      });
+      setNotesDraft(result.notes);
+    } else {
+      upsertObservation({ frameworkId: framework.id, controlId: selected.control.id, evidenceLinks: nextLinks, status });
+    }
   }
 
   function handleRemoveEvidenceLink(evidenceId: string) {
@@ -223,7 +236,7 @@ export function AssessmentPage() {
         Assessment Workspace
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Rate each control on the normalized 0–3 maturity scale and link supporting evidence.
+        Link evidence and the assistant drafts a rating and observations for you to review and adjust.
       </Typography>
 
       {hasScopeReference && (
@@ -441,13 +454,13 @@ export function AssessmentPage() {
               </Typography>
 
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                Notes
+                Observations
               </Typography>
               <TextField
                 fullWidth
                 multiline
                 minRows={4}
-                placeholder="Assessment notes for this control..."
+                placeholder="Observations for this control..."
                 value={notesDraft}
                 onChange={(e) => setNotesDraft(e.target.value)}
                 onBlur={handleNotesBlur}
