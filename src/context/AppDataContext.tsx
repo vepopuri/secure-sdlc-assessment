@@ -5,12 +5,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Evidence, Observation, ScopeDocument, ScopeSelection } from '../types';
+import type { Control, Evidence, Observation, ScopeDocument, ScopeSelection } from '../types';
 import * as evidenceService from '../services/evidenceService';
 import * as assessmentService from '../services/assessmentService';
 import * as scopeService from '../services/scopeService';
+import * as customFrameworkService from '../services/customFrameworkService';
 import type { AddFileInput, AddNoteInput } from '../services/evidenceService';
 import type { UpsertObservationInput } from '../services/assessmentService';
+import type { AddCustomControlInput } from '../services/customFrameworkService';
 import { observationId } from '../types';
 import { AppDataContext, type AppDataContextValue } from './appDataContextDefinition';
 
@@ -19,23 +21,40 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [observations, setObservations] = useState<Observation[]>([]);
   const [scope, setScope] = useState<ScopeSelection[]>([]);
   const [scopeDocument, setScopeDocument] = useState<ScopeDocument | undefined>(undefined);
+  const [customControls, setCustomControls] = useState<Control[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([evidenceService.list(), assessmentService.list(), scopeService.list(), scopeService.getDocument()]).then(
-      ([ev, obs, scp, doc]) => {
-        if (cancelled) return;
-        setEvidence(ev);
-        setObservations(obs);
-        setScope(scp);
-        setScopeDocument(doc);
-        setLoading(false);
-      },
-    );
+    Promise.all([
+      evidenceService.list(),
+      assessmentService.list(),
+      scopeService.list(),
+      scopeService.getDocument(),
+      customFrameworkService.list(),
+    ]).then(([ev, obs, scp, doc, customCtrls]) => {
+      if (cancelled) return;
+      setEvidence(ev);
+      setObservations(obs);
+      setScope(scp);
+      setScopeDocument(doc);
+      setCustomControls(customCtrls);
+      setLoading(false);
+    });
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  const addCustomControl = useCallback(async (input: AddCustomControlInput) => {
+    const created = await customFrameworkService.add(input);
+    setCustomControls((prev) => [...prev, created]);
+    return created;
+  }, []);
+
+  const removeCustomControl = useCallback(async (id: string) => {
+    await customFrameworkService.remove(id);
+    setCustomControls((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
   const addEvidenceFile = useCallback(async (input: AddFileInput) => {
@@ -138,6 +157,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       observations,
       scope,
       scopeDocument,
+      customControls,
       loading,
       addEvidenceFile,
       addEvidenceNote,
@@ -152,12 +172,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       removeScopeDocumentAttachment,
       getScopeDocumentAttachmentUrl,
       readScopeDocumentAttachmentText,
+      addCustomControl,
+      removeCustomControl,
     }),
     [
       evidence,
       observations,
       scope,
       scopeDocument,
+      customControls,
       loading,
       addEvidenceFile,
       addEvidenceNote,
@@ -172,6 +195,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       removeScopeDocumentAttachment,
       getScopeDocumentAttachmentUrl,
       readScopeDocumentAttachmentText,
+      addCustomControl,
+      removeCustomControl,
     ],
   );
 

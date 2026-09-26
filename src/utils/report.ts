@@ -85,6 +85,7 @@ export function buildRoadmap(gaps: GapEntry[], limitPerPhase = 6): RoadmapItem[]
 }
 
 export interface PeerComparisonRow {
+  frameworkId: string;
   frameworkShortName: string;
   yourAverage: number;
   peerAverage: number | null;

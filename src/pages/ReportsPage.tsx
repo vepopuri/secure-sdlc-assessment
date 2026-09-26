@@ -35,11 +35,12 @@ import type { DetailedObservationGroup, RoadmapPhase } from '../utils/report';
 import { MaturityBarChart } from '../components/MaturityBarChart';
 import { MATURITY_LABELS, observationId } from '../types';
 import type { Framework } from '../types';
+import { buildCustomFramework } from '../utils/customFramework';
 
 const ROADMAP_PHASES: RoadmapPhase[] = ['Now (0 to 30 days)', 'Next (31 to 90 days)', 'Later (90+ days)'];
 
 export function ReportsPage() {
-  const { observations, evidence, scope, loading } = useAppData();
+  const { observations, evidence, scope, loading, customControls } = useAppData();
   const [frameworkIndex, setFrameworkIndex] = useState(0);
   const [story, setStory] = useState('');
   const [peerInputs, setPeerInputs] = useState<Record<string, string>>({});
@@ -47,8 +48,9 @@ export function ReportsPage() {
 
   if (loading) return null;
 
-  const scopedFrameworks = frameworks.map((f) => applyScope(f, includedControlIdsFor(scope, f.id)));
-  const rawFramework = frameworks[frameworkIndex];
+  const allFrameworks = [...frameworks, buildCustomFramework(customControls)];
+  const scopedFrameworks = allFrameworks.map((f) => applyScope(f, includedControlIdsFor(scope, f.id)));
+  const rawFramework = allFrameworks[frameworkIndex];
   const framework = scopedFrameworks[frameworkIndex];
   const score = scoreFramework(framework, observations);
   const gaps = topGaps(framework, observations);
@@ -62,7 +64,7 @@ export function ReportsPage() {
     const raw = peerInputs[fs.frameworkId];
     const parsed = raw !== undefined && raw.trim() !== '' ? Number(raw) : null;
     const peerAverage = parsed !== null && !Number.isNaN(parsed) ? Math.min(3, Math.max(0, parsed)) : null;
-    return { frameworkShortName: fs.shortName, yourAverage: fs.averageRating, peerAverage };
+    return { frameworkId: fs.frameworkId, frameworkShortName: fs.shortName, yourAverage: fs.averageRating, peerAverage };
   });
 
   function buildDetailedGroup(fw: Framework): DetailedObservationGroup {
@@ -164,7 +166,7 @@ export function ReportsPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {peerRows.map((row, i) => (
+              {peerRows.map((row) => (
                 <TableRow key={row.frameworkShortName}>
                   <TableCell>{row.frameworkShortName}</TableCell>
                   <TableCell align="right">{row.yourAverage.toFixed(1)} / 3</TableCell>
@@ -175,8 +177,8 @@ export function ReportsPage() {
                       slotProps={{ htmlInput: { min: 0, max: 3, step: 0.1 } }}
                       sx={{ width: 90 }}
                       placeholder="0 to 3"
-                      value={peerInputs[frameworks[i].id] ?? ''}
-                      onChange={(e) => setPeerInputs((prev) => ({ ...prev, [frameworks[i].id]: e.target.value }))}
+                      value={peerInputs[row.frameworkId] ?? ''}
+                      onChange={(e) => setPeerInputs((prev) => ({ ...prev, [row.frameworkId]: e.target.value }))}
                     />
                   </TableCell>
                   <TableCell align="right">
@@ -288,7 +290,7 @@ export function ReportsPage() {
         className="no-print"
         sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
       >
-        {frameworks.map((f) => (
+        {allFrameworks.map((f) => (
           <Tab key={f.id} label={`${f.shortName} ${f.version}`} sx={{ textTransform: 'none' }} />
         ))}
       </Tabs>

@@ -33,12 +33,15 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import AddIcon from '@mui/icons-material/Add';
 import { frameworks } from '../data/frameworks';
 import { useAppData } from '../context/useAppData';
 import type { Control, Evidence, MaturityRating, ObservationStatus } from '../types';
 import { MATURITY_LABELS } from '../types';
 import { applyScope, includedControlIdsFor } from '../utils/scope';
 import { autoAssessControl } from '../utils/autoAssess';
+import { buildCustomFramework, CUSTOM_FRAMEWORK_ID } from '../utils/customFramework';
+import { CustomFrameworkDialog } from '../components/scope/CustomFrameworkDialog';
 
 const STATUS_ICONS: Record<ObservationStatus, React.ElementType> = {
   'not-started': RadioButtonUncheckedIcon,
@@ -59,12 +62,14 @@ const STATUS_OPTIONS: { value: ObservationStatus; label: string }[] = [
 ];
 
 export function AssessmentPage() {
-  const { getObservation, upsertObservation, evidence, scope, scopeDocument } = useAppData();
+  const { getObservation, upsertObservation, evidence, scope, scopeDocument, customControls } = useAppData();
   const [copied, setCopied] = useState(false);
   const [assessing, setAssessing] = useState(false);
   const [assistMessage, setAssistMessage] = useState<string | null>(null);
+  const [customDialogOpen, setCustomDialogOpen] = useState(false);
   const [frameworkIndex, setFrameworkIndex] = useState(0);
-  const rawFramework = frameworks[frameworkIndex];
+  const allFrameworks = [...frameworks, buildCustomFramework(customControls)];
+  const rawFramework = allFrameworks[frameworkIndex];
   const framework = applyScope(rawFramework, includedControlIdsFor(scope, rawFramework.id));
   const [selectedControlId, setSelectedControlId] = useState<string | null>(null);
   // Reset the selected control whenever the framework tab changes (render-time
@@ -289,12 +294,17 @@ export function AssessmentPage() {
         onChange={(_e, v) => setFrameworkIndex(v)}
         sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
       >
-        {frameworks.map((f) => (
+        {allFrameworks.map((f) => (
           <Tab key={f.id} label={`${f.shortName} ${f.version}`} sx={{ textTransform: 'none' }} />
         ))}
       </Tabs>
 
-      <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
+      <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mb: 2 }}>
+        {rawFramework.id === CUSTOM_FRAMEWORK_ID && (
+          <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => setCustomDialogOpen(true)}>
+            Add controls
+          </Button>
+        )}
         <Button
           size="small"
           variant="outlined"
@@ -312,7 +322,9 @@ export function AssessmentPage() {
             {framework.functions.length === 0 && (
               <Box sx={{ p: 3 }}>
                 <Typography variant="body2" color="text.secondary">
-                  No controls are in scope for this framework. Add some on the Home page.
+                  {rawFramework.id === CUSTOM_FRAMEWORK_ID
+                    ? 'No custom controls yet. Combine controls from the other frameworks or write your own with "Add controls" above.'
+                    : 'No controls are in scope for this framework. Add some on the Home page.'}
                 </Typography>
               </Box>
             )}
@@ -529,6 +541,8 @@ export function AssessmentPage() {
           {assistMessage}
         </Alert>
       </Snackbar>
+
+      <CustomFrameworkDialog open={customDialogOpen} onClose={() => setCustomDialogOpen(false)} />
     </Box>
   );
 }
