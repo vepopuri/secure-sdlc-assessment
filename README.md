@@ -56,34 +56,47 @@ engagement data is actually shared between members.
   only in an httpOnly cookie, its SHA-256 hash in the `sessions` table.
   This makes membership/role changes revocable immediately — a stateless
   JWT can't do that without reinventing a session table anyway. Cookie
-  parsing/serialization is hand-rolled (`api/_lib/auth.ts`) rather than
+  parsing/serialization is hand-rolled (`api/lib/auth.ts`) rather than
   using the `cookie` npm package — its v2 major dropped its CommonJS
   entry point entirely (ESM-only), which risks an `ERR_REQUIRE_ESM` crash
   at cold start on Vercel's Node runtime, before a function's own
   try/catch ever runs.
-- **DB access is `pg` (node-postgres), not `@neondatabase/serverless`.**
-  The Neon HTTP driver was the original choice (a natural fit for
-  serverless), and it worked perfectly locally (`npm run migrate`,
-  every manual test) — but every deployed function that so much as
-  imported it crashed with a bare `FUNCTION_INVOCATION_FAILED`, even
-  ones with zero other logic, before its own try/catch ever ran. This
-  was the single hardest bug in this phase to pin down, precisely
-  because it was invisible locally. `api/_lib/db.ts` now exports a
-  `sql` tagged-template function backed by `pg.Client`, API-compatible
-  with how the Neon driver was called, so no call site needed to
-  change. `package.json` still pins `"engines": {"node": ">=20.0.0"}`
-  as a reasonable baseline.
+- **DB access is `postgres` (postgres.js).** Both `@neondatabase/serverless`
+  and `pg` were tried first and both crashed with a bare
+  `FUNCTION_INVOCATION_FAILED` on every deployed invocation, merely from
+  being imported — never even called — despite working perfectly in every
+  local test. The actual root cause turned out to have nothing to do with
+  either package: `package.json` has `"type": "module"`, so Node's ESM
+  loader requires an explicit file extension on every relative import at
+  runtime (`from '../lib/db.js'`, not `from '../lib/db'`), and every
+  `api/*.ts` file was importing its siblings extensionlessly. That builds
+  fine (esbuild doesn't enforce it) but crashes the instant the function
+  is invoked, and Vercel only ever surfaces that as a generic,
+  stack-trace-free `FUNCTION_INVOCATION_FAILED` page — which is what made
+  this the hardest bug in this phase to pin down. **Every relative import
+  under `api/` needs a `.js` extension**, including ones you add later.
+  `postgres` was kept over reverting to `pg`/neon once the real fix landed,
+  since it's zero-dependency, pure JS, and its own `sql` tagged template is
+  a closer match to this codebase's call sites than either alternative.
+  `package.json` pins `"engines": {"node": "24.x"}` (Vercel deprecates
+  older Node majors on a rolling basis; check its build warnings if a
+  future deploy complains about this).
 - **Passwords** are hashed with `bcryptjs` (pure JS, no native bindings —
   avoids the classic Vercel serverless build failure with native `bcrypt`).
-- **Email verification is mandatory**: signup creates the account but does
-  not sign it in — it emails a verification link (`api/_lib/email.ts`, via
-  Resend) and login is rejected with `403 EMAIL_NOT_VERIFIED` until that
-  link is clicked (`/verify-email` page, `verify-email` action below).
-  Requires `RESEND_API_KEY` (and optionally `EMAIL_FROM`, `APP_BASE_URL` —
-  the latter falls back to `https://${VERCEL_URL}`) as Vercel environment
-  variables; without `RESEND_API_KEY` set, signup still works but no email
-  is actually sent (logged as a warning), so accounts are stuck unverified
-  until it's configured.
+- **Email verification is currently disabled.** Signup marks the account
+  verified and signs the user in immediately (same response shape as
+  login) instead of emailing a verification link, since `RESEND_API_KEY`
+  isn't configured on this deployment yet. The verification schema,
+  `verify-email`/`resend-verification` endpoints, and `sendVerificationEmail`
+  (`api/lib/email.ts`, via Resend) are all still in place and untouched —
+  re-enabling verification is a small, contained change in
+  `handleSignup`/`handleLogin` in `api/auth/[action]/index.ts` (see the
+  comments there): stop setting `email_verified_at` at insert time, restore
+  the `createVerificationToken` + `sendVerificationEmail` call, and restore
+  the `emailVerifiedAt` check in `handleLogin`. Once `RESEND_API_KEY` (and
+  optionally `EMAIL_FROM`, `APP_BASE_URL` — the latter falls back to
+  `https://${VERCEL_URL}`) is set as a Vercel environment variable, real
+  verification emails will send.
 - **All auth endpoints are one function, `api/auth/[action]/index.ts`**
   (a dynamic route: `req.query.action` picks `signup` / `login` /
   `logout` / `session` / `verify-email` / `resend-verification` — the
@@ -125,7 +138,7 @@ engagement data is actually shared between members.
   ```
   Once a Postgres store is connected to the Vercel project (Storage tab),
   `POSTGRES_URL` is auto-injected into deployed functions —
-  `api/_lib/db.ts` reads `DATABASE_URL` first, falling back to
+  `api/lib/db.ts` reads `DATABASE_URL` first, falling back to
   `POSTGRES_URL`.
 - Local `npm run dev` (plain Vite) has no `/api` proxy, so `api/*`
   functions won't respond under `vite dev` — use `vercel dev` instead when
@@ -139,9 +152,11 @@ engagement data is actually shared between members.
 ## Pages
 
 - **Login / Sign up** (`/login`, `/signup`) — email + password
-  authentication. Signing up requires clicking a verification link sent to
-  that email (`/check-email`, `/verify-email`) before the account can sign
-  in. Everything else below requires being signed in.
+  authentication. Signing up currently signs the account in immediately
+  (email verification is disabled for now — see "Database &
+  authentication" above); the `/check-email` and `/verify-email` pages
+  still exist for when it's re-enabled. Everything else below requires
+  being signed in.
 - **Home** (`/`) — a clean hero (title, one summary paragraph, two CTAs,
   an animated Deloitte-palette background, and three interactive framework
   badges) plus a "Where would you like to start?" grid of four clickable
