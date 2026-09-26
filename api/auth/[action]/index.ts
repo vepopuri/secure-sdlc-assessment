@@ -81,12 +81,10 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
 
   const sql = getSql();
   const rows = await sql`
-    select id, email, password_hash as "passwordHash", display_name as "displayName", email_verified_at as "emailVerifiedAt"
+    select id, email, password_hash as "passwordHash", display_name as "displayName"
     from users where lower(email) = ${email} limit 1
   `;
-  const user = rows[0] as
-    | { id: string; email: string; passwordHash: string | null; displayName: string; emailVerifiedAt: string | null }
-    | undefined;
+  const user = rows[0] as { id: string; email: string; passwordHash: string | null; displayName: string } | undefined;
 
   // Deliberately identical error for "no such user" and "wrong password" —
   // never reveal which one was wrong.
@@ -94,9 +92,9 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
     throw new HttpError(401, 'Invalid email or password.');
   }
 
-  if (!user.emailVerifiedAt) {
-    throw new HttpError(403, 'Please verify your email before signing in.', 'EMAIL_NOT_VERIFIED');
-  }
+  // Email verification is disabled for now (see handleSignup) -- no
+  // emailVerifiedAt check here, so pre-existing unverified accounts can
+  // still sign in.
 
   const userAgent = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined;
   const token = await createSession(user.id, userAgent);
