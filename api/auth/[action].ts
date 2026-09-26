@@ -17,9 +17,18 @@ import {
   destroySession,
   getSessionUser,
 } from '../_lib/auth';
-import { createVerificationToken, consumeVerificationToken } from '../_lib/verification';
-import { sendVerificationEmail } from '../_lib/email';
 import { sendError, HttpError } from '../_lib/authz';
+
+// TEMP DEBUG: verification/email imports removed to isolate a crash
+async function createVerificationToken(_userId: string): Promise<string> {
+  throw new Error('disabled for debugging');
+}
+async function consumeVerificationToken(_token: string): Promise<{ userId: string } | null> {
+  throw new Error('disabled for debugging');
+}
+async function sendVerificationEmail(_email: string, _token: string): Promise<void> {
+  throw new Error('disabled for debugging');
+}
 
 interface SignupBody {
   email?: string;
