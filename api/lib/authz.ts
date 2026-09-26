@@ -4,8 +4,8 @@
 // to parsing + one or two SQL statements.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getSessionUser, type SessionUser } from './auth';
-import { getSql } from './db';
+import { getSessionUser, type SessionUser } from './auth.js';
+import { getSql } from './db.js';
 
 export type EngagementRole = 'owner' | 'reviewer' | 'viewer';
 

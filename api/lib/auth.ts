@@ -6,7 +6,7 @@
 import { randomBytes, createHash } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getSql } from './db';
+import { getSql } from './db.js';
 
 export const SESSION_COOKIE_NAME = 'ssdlc_session';
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days

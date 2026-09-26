@@ -3,7 +3,7 @@
 // keyed by user_id and single-use (consumed_at), not a login mechanism.
 
 import { randomBytes, createHash } from 'node:crypto';
-import { getSql } from './db';
+import { getSql } from './db.js';
 
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
