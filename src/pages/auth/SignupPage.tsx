@@ -18,8 +18,8 @@ export function SignupPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await signup(email, password, displayName);
-      navigate('/check-email', { replace: true, state: { email } });
+      const result = await signup(email, password, displayName);
+      navigate('/check-email', { replace: true, state: { email, verifyUrl: result.verifyUrl } });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
     } finally {

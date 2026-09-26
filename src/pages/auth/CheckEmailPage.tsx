@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { Alert, Box, Button, Paper, Typography } from '@mui/material';
+import { Alert, Box, Button, Link, Paper, Typography } from '@mui/material';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/auth/useAuth';
 
 export function CheckEmailPage() {
   const { resendVerification } = useAuth();
   const location = useLocation();
-  const email = (location.state as { email?: string } | null)?.email ?? null;
+  const state = location.state as { email?: string; verifyUrl?: string } | null;
+  const email = state?.email ?? null;
+  const verifyUrl = state?.verifyUrl ?? null;
   const [resent, setResent] = useState(false);
   const [sending, setSending] = useState(false);
 
@@ -45,6 +47,16 @@ export function CheckEmailPage() {
         {resent && (
           <Alert severity="success" sx={{ mb: 2, textAlign: 'left' }}>
             Verification email sent again.
+          </Alert>
+        )}
+
+        {verifyUrl && (
+          <Alert severity="info" sx={{ mb: 2, textAlign: 'left' }}>
+            Email sending isn't configured on this deployment yet, so here's your verification
+            link directly:{' '}
+            <Link href={verifyUrl} sx={{ wordBreak: 'break-all' }}>
+              {verifyUrl}
+            </Link>
           </Alert>
         )}
 
