@@ -61,7 +61,7 @@ export interface Observation {
   updatedAt: string; // ISO timestamp
 }
 
-export type EvidenceKind = 'document' | 'interview-note' | 'image' | 'other';
+export type EvidenceKind = 'document' | 'interview-note' | 'general-note' | 'image' | 'other';
 
 export interface Evidence {
   id: string;

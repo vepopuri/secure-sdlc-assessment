@@ -50,6 +50,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return created;
   }, []);
 
+  const addEvidenceGeneralNote = useCallback(async (input: AddNoteInput) => {
+    const created = await evidenceService.addGeneralNote(input);
+    setEvidence((prev) => [created, ...prev]);
+    return created;
+  }, []);
+
   const removeEvidence = useCallback(async (id: string) => {
     await evidenceService.remove(id);
     setEvidence((prev) => prev.filter((e) => e.id !== id));
@@ -135,6 +141,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       loading,
       addEvidenceFile,
       addEvidenceNote,
+      addEvidenceGeneralNote,
       removeEvidence,
       getEvidenceObjectUrl,
       upsertObservation,
@@ -154,6 +161,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       loading,
       addEvidenceFile,
       addEvidenceNote,
+      addEvidenceGeneralNote,
       removeEvidence,
       getEvidenceObjectUrl,
       upsertObservation,

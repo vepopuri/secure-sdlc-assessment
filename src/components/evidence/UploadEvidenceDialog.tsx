@@ -37,9 +37,25 @@ const FILE_KIND_OPTIONS: { value: EvidenceKind; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
-export function UploadEvidenceDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { addEvidenceFile, addEvidenceNote } = useAppData();
-  const [tab, setTab] = useState<'file' | 'note'>('file');
+type UploadTab = 'file' | 'note' | 'general';
+
+export function UploadEvidenceDialog({
+  open,
+  onClose,
+  initialTab = 'file',
+}: {
+  open: boolean;
+  onClose: () => void;
+  initialTab?: UploadTab;
+}) {
+  const { addEvidenceFile, addEvidenceNote, addEvidenceGeneralNote } = useAppData();
+  const [tab, setTab] = useState<UploadTab>(initialTab);
+  const [lastOpenKey, setLastOpenKey] = useState(false);
+  // Reset to the requested tab each time the dialog is (re)opened.
+  if (open !== lastOpenKey) {
+    setLastOpenKey(open);
+    if (open) setTab(initialTab);
+  }
 
   // File tab state — supports selecting multiple files at once.
   const [files, setFiles] = useState<File[]>([]);
@@ -48,11 +64,16 @@ export function UploadEvidenceDialog({ open, onClose }: { open: boolean; onClose
   const [fileTags, setFileTags] = useState<string[]>([]);
   const [fileNotes, setFileNotes] = useState('');
 
-  // Note tab state
+  // Meeting notes tab state
   const [noteTitle, setNoteTitle] = useState('');
   const [noteBody, setNoteBody] = useState('');
   const [noteTags, setNoteTags] = useState<string[]>([]);
   const [noteNotes, setNoteNotes] = useState('');
+
+  // Additional notes tab state
+  const [generalTitle, setGeneralTitle] = useState('');
+  const [generalBody, setGeneralBody] = useState('');
+  const [generalTags, setGeneralTags] = useState<string[]>([]);
 
   const [saving, setSaving] = useState(false);
 
@@ -66,7 +87,9 @@ export function UploadEvidenceDialog({ open, onClose }: { open: boolean; onClose
     setNoteBody('');
     setNoteTags([]);
     setNoteNotes('');
-    setTab('file');
+    setGeneralTitle('');
+    setGeneralBody('');
+    setGeneralTags([]);
     onClose();
   }
 
@@ -126,15 +149,33 @@ export function UploadEvidenceDialog({ open, onClose }: { open: boolean; onClose
     }
   }
 
+  async function handleSaveGeneral() {
+    if (!generalTitle.trim() || !generalBody.trim()) return;
+    setSaving(true);
+    try {
+      await addEvidenceGeneralNote({ title: generalTitle.trim(), body: generalBody.trim(), tags: generalTags });
+      resetAndClose();
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const canSave =
-    tab === 'file' ? files.length > 0 && (files.length > 1 || Boolean(fileTitle.trim())) : Boolean(noteTitle.trim() && noteBody.trim());
+    tab === 'file'
+      ? files.length > 0 && (files.length > 1 || Boolean(fileTitle.trim()))
+      : tab === 'note'
+        ? Boolean(noteTitle.trim() && noteBody.trim())
+        : Boolean(generalTitle.trim() && generalBody.trim());
+
+  const handleSave = tab === 'file' ? handleSaveFile : tab === 'note' ? handleSaveNote : handleSaveGeneral;
 
   return (
     <Dialog open={open} onClose={resetAndClose} maxWidth="sm" fullWidth>
       <DialogTitle>Add evidence</DialogTitle>
       <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ px: 3 }}>
-        <Tab label="Upload file" value="file" />
-        <Tab label="Interview note" value="note" />
+        <Tab label="Documentation" value="file" />
+        <Tab label="Meeting notes" value="note" />
+        <Tab label="Additional notes" value="general" />
       </Tabs>
       <DialogContent>
         {tab === 'file' ? (
@@ -206,7 +247,8 @@ export function UploadEvidenceDialog({ open, onClose }: { open: boolean; onClose
               minRows={2}
             />
           </Box>
-        ) : (
+        ) : null}
+        {tab === 'note' && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <TextField
               label="Title"
@@ -242,14 +284,38 @@ export function UploadEvidenceDialog({ open, onClose }: { open: boolean; onClose
             />
           </Box>
         )}
+        {tab === 'general' && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField
+              label="Title"
+              value={generalTitle}
+              onChange={(e) => setGeneralTitle(e.target.value)}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Note"
+              value={generalBody}
+              onChange={(e) => setGeneralBody(e.target.value)}
+              fullWidth
+              multiline
+              minRows={5}
+              required
+            />
+            <Autocomplete
+              multiple
+              freeSolo
+              options={[]}
+              value={generalTags}
+              onChange={(_e, value) => setGeneralTags(value as string[])}
+              renderInput={(params) => <TextField {...params} label="Tags" placeholder="Press enter to add" />}
+            />
+          </Box>
+        )}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={resetAndClose}>Cancel</Button>
-        <Button
-          variant="contained"
-          disabled={!canSave || saving}
-          onClick={tab === 'file' ? handleSaveFile : handleSaveNote}
-        >
+        <Button variant="contained" disabled={!canSave || saving} onClick={handleSave}>
           Save
         </Button>
       </DialogActions>

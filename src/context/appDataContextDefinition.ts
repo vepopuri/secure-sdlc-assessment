@@ -15,6 +15,7 @@ export interface AppDataContextValue {
   loading: boolean;
   addEvidenceFile: (input: AddFileInput) => Promise<Evidence>;
   addEvidenceNote: (input: AddNoteInput) => Promise<Evidence>;
+  addEvidenceGeneralNote: (input: AddNoteInput) => Promise<Evidence>;
   removeEvidence: (id: string) => Promise<void>;
   getEvidenceObjectUrl: (id: string) => Promise<string | undefined>;
   upsertObservation: (input: UpsertObservationInput) => Promise<Observation>;
