@@ -224,10 +224,20 @@ brand's own dark-theme pairing, chosen for a more professional, console-like
 feel — under a 4px green gradient signature bar, echoed by a matching dark
 hero band at the top of Home; Deloitte Green (`#86BC25`) as the primary
 accent everywhere else (buttons, chart bars, card accents); Open Sans
-typography; and a subtle circular motif on the Home hero, kept low-opacity
-so it never competes with the content. Colors and typography live in
-`src/theme.ts` (MUI theme) and `src/components/Layout.tsx` (header), plus
-`index.html` (font loading) and `src/index.css` (page background).
+typography. Colors and typography live in `src/theme.ts` (MUI theme) and
+`src/components/Layout.tsx` (header), plus `index.html` (font loading) and
+`src/index.css` (page background).
+
+### Home hero illustration (`src/components/WorkflowIllustration.tsx`)
+
+Three hand-drawn flat-style figures (each plain inline SVG, no image
+assets) sit in the Home hero between the summary copy and the CTA buttons,
+linked by dashed flowchart connectors — a kickoff figure holding up an
+engagement card, an interview figure reaching toward a stakeholder, and a
+documentation-review figure checking off a checklist. It's purely
+decorative (unlike `EngagementWorkflow`'s stepper below it, it carries no
+state), styled after a reference workflow-diagram illustration but using
+the app's own brand colors instead of introducing new ones.
 
 ## Project layout
 
@@ -241,7 +251,7 @@ src/
   utils/scoring.ts     pure scoring functions used by Reports
   utils/scope.ts       pure scope-filtering functions shared by Home/Assessment/Reports
   utils/suggest.ts     pure keyword control-suggestion function used on Home
-  components/          shared UI (Layout, MaturityBarChart, EngagementWorkflow, evidence/scope dialogs)
+  components/          shared UI (Layout, MaturityBarChart, EngagementWorkflow, WorkflowIllustration, evidence/scope dialogs)
   pages/               HomePage, AssessmentPage, EvidencePage, ReportsPage
 ```
 

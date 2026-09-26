@@ -35,6 +35,7 @@ import { includedControlIdsFor } from '../utils/scope';
 import { formatBytes } from '../utils/formatBytes';
 import { SuggestControlsDialog } from '../components/scope/SuggestControlsDialog';
 import { EngagementWorkflow } from '../components/EngagementWorkflow';
+import { WorkflowIllustration } from '../components/WorkflowIllustration';
 import type { ReviewLevel } from '../types';
 
 const APPLICATION_TYPES = [
@@ -183,11 +184,16 @@ export function HomePage() {
         </Typography>
         <Typography
           variant="body1"
-          sx={{ maxWidth: 560, mx: 'auto', mb: 3, color: 'rgba(255,255,255,0.8)' }}
+          sx={{ maxWidth: 640, mx: 'auto', mb: 3, color: 'rgba(255,255,255,0.8)' }}
         >
-          Define the engagement below, describe its scope, then assess controls across OWASP SAMM,
-          NIST CSF, and NIST SSDF on one normalized 0&ndash;3 maturity scale.
+          A single, structured workspace for running secure software development lifecycle
+          assessments, from kickoff through final report. Scope the engagement, collect evidence,
+          interview stakeholders, and score maturity consistently across OWASP SAMM, NIST CSF, and
+          NIST SSDF &mdash; so findings are comparable, defensible, and ready to present.
         </Typography>
+
+        <WorkflowIllustration />
+
         <Stack direction="row" spacing={1.5} justifyContent="center" sx={{ mb: 4 }}>
           <Button
             variant="contained"
