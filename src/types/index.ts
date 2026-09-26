@@ -16,6 +16,10 @@ export interface Control {
   name: string;
   description: string;
   guidance?: string;
+  /** The question a reviewer would ask the client to assess this control. */
+  question: string;
+  /** An example of what a strong, well-implemented answer looks like — calibration for reviewers. */
+  sampleAnswer: string;
 }
 
 export interface FrameworkFunction {
@@ -38,6 +42,12 @@ export interface Framework {
 
 export type ObservationStatus = 'not-started' | 'in-progress' | 'complete';
 
+/** One piece of evidence linked to an observation, optionally pointing at where in it — a page, section, or timestamp. */
+export interface EvidenceLink {
+  evidenceId: string;
+  section?: string;
+}
+
 export interface Observation {
   id: string; // `${frameworkId}:${controlId}`
   frameworkId: string;
@@ -45,11 +55,13 @@ export interface Observation {
   status: ObservationStatus;
   rating: MaturityRating | null;
   notes: string;
-  evidenceIds: string[];
+  evidenceLinks: EvidenceLink[];
+  /** True while the rating/notes are still an unreviewed assistant suggestion, cleared as soon as a reviewer edits either. */
+  autoSuggested?: boolean;
   updatedAt: string; // ISO timestamp
 }
 
-export type EvidenceKind = 'document' | 'interview-note' | 'image' | 'other';
+export type EvidenceKind = 'document' | 'interview-note' | 'general-note' | 'image' | 'other';
 
 export interface Evidence {
   id: string;
@@ -68,4 +80,37 @@ export interface Evidence {
 
 export function observationId(frameworkId: string, controlId: string): string {
   return `${frameworkId}:${controlId}`;
+}
+
+/**
+ * Which controls of a framework are in scope for this assessment engagement.
+ * Absence of a record for a framework means "everything is in scope" (the
+ * default) — a record only exists once the scope has been explicitly edited.
+ */
+export interface ScopeSelection {
+  id: string; // = frameworkId
+  frameworkId: string;
+  includedControlIds: string[];
+}
+
+export type ReviewLevel = 'application' | 'organization';
+
+/**
+ * The engagement's intake profile plus its free-text scope description —
+ * what's being assessed, boundaries, exclusions, and (optionally) an
+ * uploaded scope document. Independent of the per-control ScopeSelection
+ * checklist: it's reference material a reviewer can write once, copy
+ * elsewhere, and consult later, and it can suggest which controls to
+ * include rather than requiring them to be picked by hand.
+ */
+export interface ScopeDocument {
+  id: 'engagement-scope';
+  reviewLevel: ReviewLevel | null;
+  applicationType: string;
+  complianceRequirements: string[];
+  text: string;
+  attachmentFileName?: string;
+  attachmentMimeType?: string;
+  attachmentSizeBytes?: number;
+  updatedAt: string; // ISO timestamp
 }

@@ -1,8 +1,23 @@
 import { useState } from 'react';
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Alert,
   Box,
+  Button,
+  Checkbox,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  FormControlLabel,
+  Grid,
   Paper,
+  Snackbar,
+  Stack,
   Tab,
   Table,
   TableBody,
@@ -11,22 +26,191 @@ import {
   TableHead,
   TableRow,
   Tabs,
+  TextField,
   Typography,
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import PrintIcon from '@mui/icons-material/Print';
+import SlideshowIcon from '@mui/icons-material/Slideshow';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import CircularProgress from '@mui/material/CircularProgress';
 import { frameworks } from '../data/frameworks';
 import { useAppData } from '../context/useAppData';
-import { scoreFramework, topGaps } from '../utils/scoring';
+import { scoreFramework, topGaps, overallAverageRating } from '../utils/scoring';
+import { applyScope, includedControlIdsFor } from '../utils/scope';
+import { aggregateTopGaps, buildExecutiveSummary, buildReportText, buildRoadmap } from '../utils/report';
+import type { DetailedObservationGroup, RoadmapPhase } from '../utils/report';
 import { MaturityBarChart } from '../components/MaturityBarChart';
+import { MATURITY_LABELS, observationId } from '../types';
+import type { Framework } from '../types';
+import { buildCustomFramework } from '../utils/customFramework';
+import { DEFAULT_PPTX_OPTIONS, exportEngagementPptx } from '../utils/pptxExport';
+import type { PptxExportOptions } from '../utils/pptxExport';
+
+const ROADMAP_PHASES: RoadmapPhase[] = ['Now (0 to 30 days)', 'Next (31 to 90 days)', 'Later (90+ days)'];
+
+const PPTX_OPTION_LABELS: { key: keyof PptxExportOptions; label: string; hint: string }[] = [
+  {
+    key: 'executiveSummary',
+    label: 'Executive summary',
+    hint: 'Scope and objectives, assessment framework, executive summary, takeaways, maturity by function, and industry benchmark.',
+  },
+  {
+    key: 'assessmentOverview',
+    label: 'Assessment overview',
+    hint: 'Strengths and opportunity areas for every function, in each in-scope framework.',
+  },
+  {
+    key: 'roadmapInitiatives',
+    label: 'Roadmap and initiatives',
+    hint: 'A Now/Next/Later swimlane per framework, plus initiative cards.',
+  },
+  {
+    key: 'domainsDetailed',
+    label: 'Program domains detailed assessment report',
+    hint: 'One slide per assessed control: question asked, observations, and evidence.',
+  },
+  {
+    key: 'appendix',
+    label: 'Appendix',
+    hint: 'Maturity scale, documentation reviewed, and interviews conducted (from the Evidence Library).',
+  },
+];
 
 export function ReportsPage() {
-  const { observations, loading } = useAppData();
+  const { observations, evidence, scope, loading, customControls, scopeDocument } = useAppData();
   const [frameworkIndex, setFrameworkIndex] = useState(0);
-  const framework = frameworks[frameworkIndex];
+  const [story, setStory] = useState('');
+  const [peerInputs, setPeerInputs] = useState<Record<string, string>>({});
+  const [copied, setCopied] = useState(false);
+  const [pptxDialogOpen, setPptxDialogOpen] = useState(false);
+  const [pptxOptions, setPptxOptions] = useState<PptxExportOptions>(DEFAULT_PPTX_OPTIONS);
+  const [pptxGenerating, setPptxGenerating] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   if (loading) return null;
 
+  const allFrameworks = [...frameworks, buildCustomFramework(customControls)];
+  const scopedFrameworks = allFrameworks.map((f) => applyScope(f, includedControlIdsFor(scope, f.id)));
+  const rawFramework = allFrameworks[frameworkIndex];
+  const framework = scopedFrameworks[frameworkIndex];
   const score = scoreFramework(framework, observations);
   const gaps = topGaps(framework, observations);
+
+  const frameworkScores = scopedFrameworks.map((f) => scoreFramework(f, observations));
+  const frameworkBundles = scopedFrameworks.map((f, i) => ({
+    framework: f,
+    functionScores: frameworkScores[i].functionScores,
+    observations,
+    gaps: topGaps(f, observations),
+  }));
+  const aggregatedGaps = aggregateTopGaps(scopedFrameworks, observations, 10);
+  const executiveSummary = buildExecutiveSummary({ frameworkScores, gaps: aggregatedGaps, story });
+  const displayedSummary = aiSummary ?? executiveSummary;
+  const roadmap = buildRoadmap(aggregatedGaps);
+
+  async function handleGenerateAiSummary() {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const totalControls = frameworkScores.reduce((sum, fs) => sum + fs.totalCount, 0);
+      const ratedControls = frameworkScores.reduce((sum, fs) => sum + fs.ratedCount, 0);
+      const response = await fetch('/api/generate-report', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          frameworkNames: frameworkScores.map((fs) => fs.shortName),
+          totalControls,
+          ratedControls,
+          averageMaturity: Number(overallAverageRating(frameworkScores).toFixed(2)),
+          topGaps: aggregatedGaps.map((g) => ({ framework: g.frameworkShortName, code: g.controlCode, name: g.controlName, rating: g.rating })),
+          reviewerContext: story,
+        }),
+      });
+      const data = (await response.json()) as { executiveSummary?: string; error?: string };
+      if (!response.ok || !data.executiveSummary) {
+        setAiError(data.error ?? 'The AI service did not return a summary.');
+        return;
+      }
+      setAiSummary(data.executiveSummary);
+    } catch {
+      setAiError('Could not reach the AI service. Check your connection and try again.');
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  const peerRows = frameworkScores.map((fs) => {
+    const raw = peerInputs[fs.frameworkId];
+    const parsed = raw !== undefined && raw.trim() !== '' ? Number(raw) : null;
+    const peerAverage = parsed !== null && !Number.isNaN(parsed) ? Math.min(3, Math.max(0, parsed)) : null;
+    return { frameworkId: fs.frameworkId, frameworkShortName: fs.shortName, yourAverage: fs.averageRating, peerAverage };
+  });
+
+  function buildDetailedGroup(fw: Framework): DetailedObservationGroup {
+    const entries = fw.functions.flatMap((fn) =>
+      fn.controls.map((control) => {
+        const obs = observations.find((o) => o.id === observationId(fw.id, control.id));
+        const ratingLabel =
+          obs?.rating !== null && obs?.rating !== undefined
+            ? `${obs.rating} / 3 (${MATURITY_LABELS[obs.rating]})`
+            : 'Not yet rated';
+        const evidenceTitles = (obs?.evidenceLinks ?? [])
+          .map((link) => evidence.find((e) => e.id === link.evidenceId)?.title)
+          .filter((t): t is string => Boolean(t));
+        return {
+          code: control.code,
+          name: control.name,
+          ratingLabel,
+          question: control.question,
+          notes: obs?.notes ?? '',
+          evidenceTitles,
+        };
+      }),
+    );
+    return { frameworkShortName: fw.shortName, entries };
+  }
+
+  async function handleCopyReport() {
+    const text = buildReportText({
+      title: 'Secure SDLC Assessment Report',
+      executiveSummary: displayedSummary,
+      peerRows,
+      gaps: aggregatedGaps,
+      roadmap,
+      detailedGroups: scopedFrameworks.map(buildDetailedGroup),
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+    } catch {
+      // Clipboard access can be denied by the browser; nothing to recover from here.
+    }
+  }
+
+  async function handleGeneratePptx() {
+    setPptxGenerating(true);
+    try {
+      await exportEngagementPptx({
+        options: pptxOptions,
+        scopeDocument,
+        executiveSummary: displayedSummary,
+        peerRows,
+        aggregatedGaps,
+        roadmap,
+        detailedGroups: scopedFrameworks.map(buildDetailedGroup),
+        frameworkBundles,
+        evidence,
+      });
+      setPptxDialogOpen(false);
+    } finally {
+      setPptxGenerating(false);
+    }
+  }
 
   return (
     <Box>
@@ -34,22 +218,231 @@ export function ReportsPage() {
         Reports
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Maturity by function and the highest-priority gaps for each framework.
+        Engagement report across every in scope framework, plus a per-framework detail view below.
       </Typography>
 
+      <Paper variant="outlined" sx={{ p: 2.5, mb: 3 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" rowGap={1} sx={{ mb: 1.5 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            Executive summary
+          </Typography>
+          <Stack direction="row" spacing={1} className="no-print" flexWrap="wrap" rowGap={1}>
+            <Button size="small" startIcon={<ContentCopyIcon />} onClick={handleCopyReport}>
+              Copy report as text
+            </Button>
+            <Button size="small" variant="outlined" startIcon={<PrintIcon />} onClick={() => window.print()}>
+              Print / save as PDF
+            </Button>
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={<SlideshowIcon />}
+              sx={{ bgcolor: '#86BC25', '&:hover': { bgcolor: '#75A521' } }}
+              onClick={() => setPptxDialogOpen(true)}
+            >
+              Export as PowerPoint
+            </Button>
+          </Stack>
+        </Stack>
+        <TextField
+          fullWidth
+          multiline
+          minRows={2}
+          className="no-print"
+          label="Add your own context for the executive summary (optional)"
+          placeholder="e.g. Frame this for the audit committee ahead of next quarter's board review."
+          value={story}
+          onChange={(e) => setStory(e.target.value)}
+          sx={{ mb: 0.5 }}
+        />
+        <Typography variant="caption" color="text.secondary" className="no-print" sx={{ display: 'block', mb: 1.5 }}>
+          In the template summary below, this text is inserted exactly as typed. If you generate with AI instead, it's
+          used as background context and the AI writes the full paragraph.
+        </Typography>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" rowGap={1} className="no-print" sx={{ mb: 1.5 }}>
+          <Box>
+            {aiSummary && (
+              <Chip size="small" icon={<AutoAwesomeIcon />} label="AI-generated, review before using" color="primary" variant="outlined" />
+            )}
+          </Box>
+          <Stack direction="row" spacing={1}>
+            {aiSummary && (
+              <Button size="small" startIcon={<RestartAltIcon />} onClick={() => { setAiSummary(null); setAiError(null); }}>
+                Revert to template
+              </Button>
+            )}
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={aiLoading ? <CircularProgress size={16} /> : <AutoAwesomeIcon />}
+              disabled={aiLoading}
+              onClick={handleGenerateAiSummary}
+            >
+              {aiLoading ? 'Generating...' : aiSummary ? 'Regenerate with AI' : 'Generate with AI'}
+            </Button>
+          </Stack>
+        </Stack>
+        {aiError && (
+          <Alert severity="warning" className="no-print" sx={{ mb: 1.5 }} onClose={() => setAiError(null)}>
+            {aiError}
+          </Alert>
+        )}
+        <Typography variant="body2">{displayedSummary}</Typography>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: 2.5, mb: 3 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+          Maturity score vs. peer benchmark
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Peer benchmark values are optional and entered by you (e.g. from a prior industry survey); they are not
+          sourced from real peer data by this app.
+        </Typography>
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Framework</TableCell>
+                <TableCell align="right">Your average</TableCell>
+                <TableCell align="right" className="no-print">
+                  Peer benchmark
+                </TableCell>
+                <TableCell align="right">Difference</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {peerRows.map((row) => (
+                <TableRow key={row.frameworkShortName}>
+                  <TableCell>{row.frameworkShortName}</TableCell>
+                  <TableCell align="right">{row.yourAverage.toFixed(1)} / 3</TableCell>
+                  <TableCell align="right" className="no-print">
+                    <TextField
+                      size="small"
+                      type="number"
+                      slotProps={{ htmlInput: { min: 0, max: 3, step: 0.1 } }}
+                      sx={{ width: 90 }}
+                      placeholder="0 to 3"
+                      value={peerInputs[row.frameworkId] ?? ''}
+                      onChange={(e) => setPeerInputs((prev) => ({ ...prev, [row.frameworkId]: e.target.value }))}
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    {row.peerAverage === null ? (
+                      <Chip size="small" label="Not set" />
+                    ) : (
+                      <Chip
+                        size="small"
+                        color={row.yourAverage >= row.peerAverage ? 'success' : 'warning'}
+                        label={`${row.yourAverage >= row.peerAverage ? '+' : ''}${(row.yourAverage - row.peerAverage).toFixed(1)}`}
+                      />
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: 2.5, mb: 3 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+          Key gaps
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          The most significant gaps across every in scope framework, worst first.
+        </Typography>
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Framework</TableCell>
+                <TableCell>Control</TableCell>
+                <TableCell align="right">Rating</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {aggregatedGaps.map((gap) => (
+                <TableRow key={`${gap.frameworkId}:${gap.controlId}`}>
+                  <TableCell>{gap.frameworkShortName}</TableCell>
+                  <TableCell>
+                    {gap.controlCode}: {gap.controlName}
+                  </TableCell>
+                  <TableCell align="right">
+                    {gap.rating === null ? (
+                      <Chip size="small" label="Unrated" />
+                    ) : (
+                      <Chip size="small" color="warning" label={gap.rating} />
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {aggregatedGaps.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={3} align="center">
+                    <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                      No gaps. Every in scope control is rated above the threshold.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: 2.5, mb: 3 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+          Key recommendations and roadmap
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Gaps grouped into a simple remediation timeline, worst first within each phase.
+        </Typography>
+        <Stack spacing={2}>
+          {ROADMAP_PHASES.map((phase) => {
+            const items = roadmap.filter((item) => item.phase === phase);
+            if (items.length === 0) return null;
+            return (
+              <Box key={phase}>
+                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                  {phase}
+                </Typography>
+                <Stack component="ul" sx={{ m: 0, pl: 2.5 }}>
+                  {items.map((item) => (
+                    <Typography key={`${item.frameworkShortName}:${item.controlCode}`} component="li" variant="body2">
+                      {item.frameworkShortName} {item.recommendation}
+                    </Typography>
+                  ))}
+                </Stack>
+              </Box>
+            );
+          })}
+          {roadmap.length === 0 && (
+            <Typography variant="body2" color="text.secondary">
+              No open items. Nothing to schedule.
+            </Typography>
+          )}
+        </Stack>
+      </Paper>
+
+      <Divider sx={{ mb: 3 }} />
+
+      <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+        Framework detail
+      </Typography>
       <Tabs
         value={frameworkIndex}
         onChange={(_e, v) => setFrameworkIndex(v)}
+        className="no-print"
         sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
       >
-        {frameworks.map((f) => (
+        {allFrameworks.map((f) => (
           <Tab key={f.id} label={`${f.shortName} ${f.version}`} sx={{ textTransform: 'none' }} />
         ))}
       </Tabs>
 
       <Paper variant="outlined" sx={{ p: 2.5, mb: 3 }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-          Maturity by function
+          Maturity by function ({rawFramework.shortName})
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           {score.ratedCount} / {score.totalCount} controls rated · average {score.averageRating.toFixed(1)} / 3
@@ -65,9 +458,9 @@ export function ReportsPage() {
         />
       </Paper>
 
-      <Paper variant="outlined" sx={{ p: 2.5 }}>
+      <Paper variant="outlined" sx={{ p: 2.5, mb: 3 }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-          Top gaps
+          Top gaps in {rawFramework.shortName}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Controls that are unrated or rated ≤ 1, worst first.
@@ -86,7 +479,7 @@ export function ReportsPage() {
                 <TableRow key={gap.controlId}>
                   <TableCell>{gap.functionCode}</TableCell>
                   <TableCell>
-                    {gap.controlCode} — {gap.controlName}
+                    {gap.controlCode}: {gap.controlName}
                   </TableCell>
                   <TableCell align="right">
                     {gap.rating === null ? (
@@ -101,7 +494,7 @@ export function ReportsPage() {
                 <TableRow>
                   <TableCell colSpan={3} align="center">
                     <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                      No gaps — every control is rated above the threshold.
+                      No gaps. Every control is rated above the threshold.
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -110,6 +503,100 @@ export function ReportsPage() {
           </Table>
         </TableContainer>
       </Paper>
+
+      <Accordion disableGutters variant="outlined">
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="subtitle2">Detailed observations ({rawFramework.shortName})</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2}>
+            {buildDetailedGroup(framework).entries.map((entry) => (
+              <Grid key={entry.code} size={{ xs: 12, md: 6 }}>
+                <Paper variant="outlined" sx={{ p: 2, height: '100%' }}>
+                  <Typography variant="subtitle2">
+                    {entry.code}: {entry.name}
+                  </Typography>
+                  <Chip size="small" sx={{ mt: 0.5, mb: 1 }} label={entry.ratingLabel} />
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 700 }}>
+                    Question asked
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    {entry.question}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 700 }}>
+                    Notes
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1, whiteSpace: 'pre-wrap' }}>
+                    {entry.notes || 'No notes yet.'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 700 }}>
+                    Evidence
+                  </Typography>
+                  {entry.evidenceTitles.length > 0 ? (
+                    <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
+                      {entry.evidenceTitles.map((title) => (
+                        <Chip key={title} size="small" variant="outlined" label={title} />
+                      ))}
+                    </Stack>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No evidence linked yet.
+                    </Typography>
+                  )}
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        </AccordionDetails>
+      </Accordion>
+
+      <Snackbar open={copied} autoHideDuration={2500} onClose={() => setCopied(false)}>
+        <Alert severity="success" variant="filled" onClose={() => setCopied(false)}>
+          Report copied to clipboard
+        </Alert>
+      </Snackbar>
+
+      <Dialog open={pptxDialogOpen} onClose={() => setPptxDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Export as PowerPoint</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            Choose which sections to include. The deck is generated entirely in your browser, from the
+            same data shown above, following a standard SSDLC assessment report structure (cover,
+            contents, then the sections below).
+          </Typography>
+          <Stack spacing={1}>
+            {PPTX_OPTION_LABELS.map((opt) => (
+              <FormControlLabel
+                key={opt.key}
+                sx={{ alignItems: 'flex-start' }}
+                control={
+                  <Checkbox
+                    sx={{ mt: -0.5 }}
+                    checked={pptxOptions[opt.key]}
+                    onChange={(e) => setPptxOptions((prev) => ({ ...prev, [opt.key]: e.target.checked }))}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {opt.label}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {opt.hint}
+                    </Typography>
+                  </Box>
+                }
+              />
+            ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setPptxDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" disabled={pptxGenerating} onClick={handleGeneratePptx}>
+            {pptxGenerating ? 'Generating...' : 'Generate PowerPoint'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

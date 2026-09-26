@@ -72,6 +72,22 @@ export async function addNote(input: AddNoteInput): Promise<Evidence> {
   return evidence;
 }
 
+/** Same shape as an interview note, but for general free-text observations not tied to a specific meeting. */
+export async function addGeneralNote(input: AddNoteInput): Promise<Evidence> {
+  const evidence: Evidence = {
+    id: newId(),
+    kind: 'general-note',
+    title: input.title,
+    notes: input.notes ?? '',
+    tags: input.tags,
+    addedAt: new Date().toISOString(),
+    hasBlob: false,
+    noteBody: input.body,
+  };
+  upsertItem(COLLECTION_KEY, evidence);
+  return evidence;
+}
+
 export async function remove(id: string): Promise<void> {
   removeItem<Evidence>(COLLECTION_KEY, id);
   await deleteBlob(id);

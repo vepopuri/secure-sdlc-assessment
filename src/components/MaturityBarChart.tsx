@@ -11,11 +11,11 @@ export interface MaturityBarDatum {
   totalCount: number;
 }
 
-const SERIES_COLOR = '#2a78d6'; // categorical slot 1 (blue), light mode
-const GRIDLINE_COLOR = '#e1e0d9';
-const BASELINE_COLOR = '#c3c2b7';
-const TEXT_PRIMARY = '#0b0b0b';
-const TEXT_MUTED = '#898781';
+const SERIES_COLOR = '#86BC25'; // Deloitte Green — brand's primary data-series color
+const GRIDLINE_COLOR = '#E6E6E6';
+const BASELINE_COLOR = '#BDBDBD';
+const TEXT_PRIMARY = '#282728';
+const TEXT_MUTED = '#555555';
 
 const MAX_VALUE = 3;
 const BAR_THICKNESS = 18;
@@ -65,7 +65,7 @@ export function MaturityBarChart({ data, ariaLabel }: { data: MaturityBarDatum[]
         height={height}
         role="img"
         aria-label={ariaLabel}
-        style={{ display: 'block', fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif' }}
+        style={{ display: 'block', fontFamily: '"Open Sans", system-ui, -apple-system, "Segoe UI", sans-serif' }}
       >
         {/* Gridlines at 0/1/2/3 */}
         {[0, 1, 2, 3].map((tick) => {
@@ -150,7 +150,7 @@ export function MaturityBarChart({ data, ariaLabel }: { data: MaturityBarDatum[]
             position: 'absolute',
             left: Math.min(tooltipPos.x + 12, CHART_WIDTH - 160),
             top: Math.max(tooltipPos.y - 36, 0),
-            background: '#1a1a19',
+            background: '#282728',
             color: '#ffffff',
             padding: '4px 8px',
             borderRadius: 4,
