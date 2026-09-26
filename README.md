@@ -189,25 +189,6 @@ framework's full catalog for anything the keywords missed, and only
 clicking "Finalize scope" merges the reviewed set into that framework's
 `ScopeSelection`.
 
-### Engagement workflow (`src/components/EngagementWorkflow.tsx`)
-
-Renders the eight-stage ribbon on Home (Kickoff → Scope Finalization →
-Document Collection & Meeting Scheduling → Documentation Review →
-Interviews → Process Data & Validate → Prepare Report → Review & Finalize).
-Each stage's done/current/upcoming state is a boolean derived from data
-already in `AppDataContext` (e.g., "Interviews" is done once any evidence
-has `kind: 'interview-note'`; "Process Data & Validate" is done once any
-observation has a rating) — never fabricated progress. The first not-done
-stage in order is "current" and gets the glow; nothing before it is ever
-un-done once its underlying data exists, since these are one-way signals
-(you can't accidentally "undo" having entered a review level). Every stage
-renders a small illustrated figure with a task-specific prop (a handshake,
-a calendar, a checklist, a magnifier, a speech bubble, a shield, a bar
-chart, a trophy) instead of a plain icon, and a faint scattering of
-dashed-flowchart shapes runs behind the whole row — both purely
-decorative, styled after a workflow-diagram illustration reference, using
-only the app's existing brand palette.
-
 ### Charts (`src/components/MaturityBarChart.tsx`)
 
 A plain SVG horizontal bar chart: one bar per function/category, length =
@@ -231,22 +212,24 @@ typography. Colors and typography live in `src/theme.ts` (MUI theme) and
 ### Home hero illustration (`src/components/WorkflowIllustration.tsx`)
 
 Eight hand-drawn flat-style figures (each plain inline SVG, no image
-assets) — one per engagement stage, matching `EngagementWorkflow`'s stages
-one-for-one — sit in the Home hero between the summary copy and the CTA
-buttons, linked by a dashed zig-zag flowchart connector: a kickoff figure
-holding up an engagement card, a scope figure checking off a clipboard, a
+assets) — one per engagement stage — sit in the Home hero between the
+summary copy and the CTA buttons, each boxed in its own bordered card so
+the stage reads as a distinct step: a kickoff figure holding up an
+engagement card, a scope figure checking off a clipboard, a
 document-collection figure with a calendar and folder, a documentation-
 review figure checking off a checklist, an interview figure reaching
 toward a stakeholder, a validation figure with a verified shield, a report
 figure presenting a small chart, and a finalize figure raising a trophy.
-Each figure also carries a small floating cluster of two supporting
+Each card also carries a small floating cluster of two supporting
 Material icon badges (e.g. a handshake + calendar-check for Kickoff) so
 every stage reads with more than one visual cue, in the spirit of a
-professionally illustrated workflow diagram. On narrow screens the row
-scrolls horizontally rather than shrinking the figures illegibly. It's
-purely decorative (unlike `EngagementWorkflow`'s stepper below it, it
-carries no state), styled after a reference workflow-diagram illustration
-but using the app's own brand colors instead of introducing new ones.
+professionally illustrated workflow diagram, with a dashed connector
+linking the cards in sequence. A caption below each card names the stage,
+centered to match the hero's overall text alignment. On narrow screens
+the row scrolls horizontally rather than shrinking the figures illegibly.
+It's purely decorative — it carries no state and duplicates no progress
+tracking — styled after a reference workflow-diagram illustration but
+using the app's own brand colors instead of introducing new ones.
 
 ## Project layout
 
@@ -260,7 +243,7 @@ src/
   utils/scoring.ts     pure scoring functions used by Reports
   utils/scope.ts       pure scope-filtering functions shared by Home/Assessment/Reports
   utils/suggest.ts     pure keyword control-suggestion function used on Home
-  components/          shared UI (Layout, MaturityBarChart, EngagementWorkflow, WorkflowIllustration, evidence/scope dialogs)
+  components/          shared UI (Layout, MaturityBarChart, WorkflowIllustration, evidence/scope dialogs)
   pages/               HomePage, AssessmentPage, EvidencePage, ReportsPage
 ```
 

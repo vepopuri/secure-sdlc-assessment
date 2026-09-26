@@ -9,7 +9,6 @@ import {
   Button,
   Checkbox,
   Chip,
-  Divider,
   FormControlLabel,
   Grid,
   Paper,
@@ -34,7 +33,6 @@ import { useAppData } from '../context/useAppData';
 import { includedControlIdsFor } from '../utils/scope';
 import { formatBytes } from '../utils/formatBytes';
 import { SuggestControlsDialog } from '../components/scope/SuggestControlsDialog';
-import { EngagementWorkflow } from '../components/EngagementWorkflow';
 import { WorkflowIllustration } from '../components/WorkflowIllustration';
 import type { ReviewLevel } from '../types';
 
@@ -211,12 +209,6 @@ export function HomePage() {
             View reports
           </Button>
         </Stack>
-
-        <Divider sx={{ borderColor: 'rgba(255,255,255,0.12)', mb: 3 }} />
-
-        <Box sx={{ textAlign: 'left' }}>
-          <EngagementWorkflow />
-        </Box>
       </Box>
 
       <Grid container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>

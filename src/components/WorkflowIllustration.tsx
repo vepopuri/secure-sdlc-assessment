@@ -1,9 +1,8 @@
 // A decorative, hand-illustrated banner for the Home hero — one flat-style
-// figure per engagement stage (all 8, matching EngagementWorkflow's steps),
-// each paired with a small cluster of supporting icon badges and linked by a
-// routed flowchart connector, in the spirit of a reference workflow
-// illustration. Purely decorative: it carries no state and blocks no
-// interaction.
+// figure per engagement stage (all 8), each boxed in its own card, paired
+// with a small cluster of supporting icon badges, and linked by a routed
+// flowchart connector, in the spirit of a reference workflow illustration.
+// Purely decorative: it carries no state and blocks no interaction.
 import { Box, Typography } from '@mui/material';
 import type { SvgIconComponent } from '@mui/icons-material';
 import HandshakeIcon from '@mui/icons-material/Handshake';
@@ -302,36 +301,51 @@ function IconBadges({ icons, colors }: { icons: [SvgIconComponent, SvgIconCompon
 
 export function WorkflowIllustration() {
   return (
-    <Box sx={{ position: 'relative', mb: 1 }}>
+    <Box sx={{ position: 'relative', mb: 1, textAlign: 'center' }}>
       <Box
         sx={{
           position: 'relative',
-          height: { xs: 210, sm: 230 },
+          height: { xs: 250, sm: 268 },
           overflowX: { xs: 'auto', md: 'visible' },
           overflowY: 'hidden',
         }}
       >
-        <Connectors />
+        <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: { xs: 148, sm: 166 } }}>
+          <Connectors />
+        </Box>
         <Box
           sx={{
             position: 'relative',
             height: '100%',
             display: 'flex',
             justifyContent: { xs: 'flex-start', md: 'space-between' },
-            alignItems: 'flex-end',
+            alignItems: 'flex-start',
             minWidth: { xs: STEP_VISUALS.length * COL_WIDTH, md: 0 },
             px: 1,
           }}
         >
           {STEP_VISUALS.map(({ key, label, Figure, icons, iconColors }) => (
             <Box key={key} sx={{ width: COL_WIDTH, flexShrink: 0, textAlign: 'center', px: 0.75 }}>
-              <Box sx={{ position: 'relative', width: '100%', height: { xs: 130, sm: 148 }, mx: 'auto' }}>
-                <Figure />
+              <Box
+                sx={{
+                  position: 'relative',
+                  width: '100%',
+                  height: { xs: 148, sm: 166 },
+                  mx: 'auto',
+                  bgcolor: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.16)',
+                  borderRadius: 2,
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+                }}
+              >
+                <Box sx={{ position: 'relative', width: '100%', height: '100%', p: 1 }}>
+                  <Figure />
+                </Box>
                 <IconBadges icons={icons} colors={iconColors} />
               </Box>
               <Typography
                 variant="caption"
-                sx={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600, display: 'block', lineHeight: 1.25, mt: 0.5 }}
+                sx={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600, display: 'block', lineHeight: 1.25, mt: 1 }}
               >
                 {label}
               </Typography>
