@@ -247,7 +247,7 @@ export function HomePage() {
           position: 'relative',
           overflow: 'hidden',
           borderRadius: 2,
-          p: { xs: 2.5, sm: 4 },
+          p: { xs: 2, sm: 2.5 },
           mb: 3,
           textAlign: 'center',
           color: '#FFFFFF',
@@ -266,15 +266,14 @@ export function HomePage() {
         </Typography>
         <Typography
           variant="body1"
-          sx={{ maxWidth: 640, mx: 'auto', mb: 2, color: 'rgba(255,255,255,0.8)' }}
+          sx={{ maxWidth: '100%', mx: 'auto', mb: 1.75, color: 'rgba(255,255,255,0.8)' }}
         >
-          A single workspace for running secure software development lifecycle assessments, from
-          kickoff through final report. Scope the engagement, collect evidence, interview
-          stakeholders, and score maturity across OWASP SAMM, NIST CSF, and NIST SSDF. Findings
-          stay comparable, defensible, and ready to present.
+          A single workspace for running secure SDLC assessments, from kickoff through final report.
+          Scope, collect evidence, interview stakeholders, and score maturity across OWASP SAMM,
+          NIST CSF, and NIST SSDF for defensible, presentation-ready findings.
         </Typography>
 
-        <Stack direction="row" spacing={1.5} justifyContent="center" flexWrap="wrap" sx={{ gap: 1.5, mb: 2.5 }}>
+        <Stack direction="row" spacing={1.5} justifyContent="center" flexWrap="wrap" sx={{ gap: 1.5, mb: 2 }}>
           {frameworks.map((f) => (
             <FrameworkBadge
               key={f.id}
