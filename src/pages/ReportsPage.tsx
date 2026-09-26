@@ -16,12 +16,14 @@ import {
 import { frameworks } from '../data/frameworks';
 import { useAppData } from '../context/useAppData';
 import { scoreFramework, topGaps } from '../utils/scoring';
+import { applyScope, includedControlIdsFor } from '../utils/scope';
 import { MaturityBarChart } from '../components/MaturityBarChart';
 
 export function ReportsPage() {
-  const { observations, loading } = useAppData();
+  const { observations, scope, loading } = useAppData();
   const [frameworkIndex, setFrameworkIndex] = useState(0);
-  const framework = frameworks[frameworkIndex];
+  const rawFramework = frameworks[frameworkIndex];
+  const framework = applyScope(rawFramework, includedControlIdsFor(scope, rawFramework.id));
 
   if (loading) return null;
 

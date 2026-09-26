@@ -3,13 +3,14 @@
 // kind of thing — keeps Fast Refresh working cleanly.
 
 import { createContext } from 'react';
-import type { Evidence, Observation } from '../types';
+import type { Evidence, Observation, ScopeSelection } from '../types';
 import type { AddFileInput, AddNoteInput } from '../services/evidenceService';
 import type { UpsertObservationInput } from '../services/assessmentService';
 
 export interface AppDataContextValue {
   evidence: Evidence[];
   observations: Observation[];
+  scope: ScopeSelection[];
   loading: boolean;
   addEvidenceFile: (input: AddFileInput) => Promise<Evidence>;
   addEvidenceNote: (input: AddNoteInput) => Promise<Evidence>;
@@ -17,6 +18,7 @@ export interface AppDataContextValue {
   getEvidenceObjectUrl: (id: string) => Promise<string | undefined>;
   upsertObservation: (input: UpsertObservationInput) => Promise<Observation>;
   getObservation: (frameworkId: string, controlId: string) => Observation | undefined;
+  setScopeIncluded: (frameworkId: string, includedControlIds: string[]) => Promise<ScopeSelection>;
 }
 
 export const AppDataContext = createContext<AppDataContextValue | undefined>(undefined);

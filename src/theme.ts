@@ -1,18 +1,37 @@
 import { createTheme } from '@mui/material/styles';
 
 // Light-only theme (v1 ships light-only per spec — no unvalidated automatic dark flip).
+// Colors and type follow the Deloitte "Together makes progress" digital brand guidance.
 export const theme = createTheme({
   palette: {
     mode: 'light',
-    primary: { main: '#2a78d6' },
-    background: { default: '#f9f9f7', paper: '#fcfcfb' },
-    text: { primary: '#0b0b0b', secondary: '#52514e' },
-    success: { main: '#0ca30c' },
-    warning: { main: '#fab219' },
-    error: { main: '#d03b3b' },
+    primary: { main: '#86BC25', dark: '#75A521', contrastText: '#FFFFFF' },
+    secondary: { main: '#00A3E0' },
+    background: { default: '#F5F5F5', paper: '#FFFFFF' },
+    text: { primary: '#282728', secondary: '#555555' },
+    success: { main: '#86BC25' },
+    info: { main: '#00A3E0' },
+    warning: { main: '#E8A317' },
+    error: { main: '#DA291C' },
+    divider: '#E6E6E6',
   },
   shape: { borderRadius: 8 },
   typography: {
-    fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+    fontFamily: '"Open Sans", system-ui, -apple-system, "Segoe UI", sans-serif',
+    h4: { fontWeight: 700 },
+    h5: { fontWeight: 700 },
+    h6: { fontWeight: 700 },
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: { textTransform: 'none', fontWeight: 700, borderRadius: 6 },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: { backgroundImage: 'none' },
+      },
+    },
   },
 });

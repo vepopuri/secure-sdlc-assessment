@@ -69,3 +69,14 @@ export interface Evidence {
 export function observationId(frameworkId: string, controlId: string): string {
   return `${frameworkId}:${controlId}`;
 }
+
+/**
+ * Which controls of a framework are in scope for this assessment engagement.
+ * Absence of a record for a framework means "everything is in scope" (the
+ * default) — a record only exists once the scope has been explicitly edited.
+ */
+export interface ScopeSelection {
+  id: string; // = frameworkId
+  frameworkId: string;
+  includedControlIds: string[];
+}

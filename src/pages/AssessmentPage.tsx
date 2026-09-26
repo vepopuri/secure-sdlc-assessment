@@ -25,8 +25,9 @@ import DonutLargeIcon from '@mui/icons-material/DonutLarge';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { frameworks } from '../data/frameworks';
 import { useAppData } from '../context/useAppData';
-import type { Control, FrameworkFunction, MaturityRating, ObservationStatus } from '../types';
+import type { Control, MaturityRating, ObservationStatus } from '../types';
 import { MATURITY_LABELS } from '../types';
+import { applyScope, includedControlIdsFor } from '../utils/scope';
 
 const STATUS_ICONS: Record<ObservationStatus, React.ElementType> = {
   'not-started': RadioButtonUncheckedIcon,
@@ -35,9 +36,9 @@ const STATUS_ICONS: Record<ObservationStatus, React.ElementType> = {
 };
 
 const STATUS_COLORS: Record<ObservationStatus, string> = {
-  'not-started': '#898781',
-  'in-progress': '#fab219',
-  complete: '#0ca30c',
+  'not-started': '#9AA0A6',
+  'in-progress': '#00A3E0',
+  complete: '#86BC25',
 };
 
 const STATUS_OPTIONS: { value: ObservationStatus; label: string }[] = [
@@ -47,18 +48,17 @@ const STATUS_OPTIONS: { value: ObservationStatus; label: string }[] = [
 ];
 
 export function AssessmentPage() {
-  const { getObservation, upsertObservation, evidence } = useAppData();
+  const { getObservation, upsertObservation, evidence, scope } = useAppData();
   const [frameworkIndex, setFrameworkIndex] = useState(0);
-  const framework = frameworks[frameworkIndex];
-  const [selectedControlId, setSelectedControlId] = useState<string | null>(
-    framework.functions[0]?.controls[0]?.id ?? null,
-  );
+  const rawFramework = frameworks[frameworkIndex];
+  const framework = applyScope(rawFramework, includedControlIdsFor(scope, rawFramework.id));
+  const [selectedControlId, setSelectedControlId] = useState<string | null>(null);
   // Reset the selected control whenever the framework tab changes (render-time
   // state adjustment, per https://react.dev/learn/you-might-not-need-an-effect).
-  const [lastFrameworkId, setLastFrameworkId] = useState(framework.id);
-  if (framework.id !== lastFrameworkId) {
-    setLastFrameworkId(framework.id);
-    setSelectedControlId(framework.functions[0]?.controls[0]?.id ?? null);
+  const [lastFrameworkId, setLastFrameworkId] = useState(rawFramework.id);
+  if (rawFramework.id !== lastFrameworkId) {
+    setLastFrameworkId(rawFramework.id);
+    setSelectedControlId(null);
   }
 
   const selected = (() => {
@@ -135,8 +135,15 @@ export function AssessmentPage() {
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 6 }}>
           <Paper variant="outlined" sx={{ maxHeight: 640, overflowY: 'auto' }}>
-            {framework.functions.map((fn: FrameworkFunction) => (
-              <Accordion key={fn.id} defaultExpanded disableGutters>
+            {framework.functions.length === 0 && (
+              <Box sx={{ p: 3 }}>
+                <Typography variant="body2" color="text.secondary">
+                  No controls are in scope for this framework. Add some on the Scope page.
+                </Typography>
+              </Box>
+            )}
+            {framework.functions.map((fn) => (
+              <Accordion key={fn.id} disableGutters>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Box>
                     <Typography variant="subtitle2">

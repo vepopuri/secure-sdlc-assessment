@@ -32,18 +32,25 @@ for evidence file bytes). Clearing site data resets the app.
 
 ## Pages
 
-- **Dashboard** (`/`) — stat tiles (frameworks, controls assessed, evidence
-  items, overall weighted average maturity) plus a score card per framework
-  with a maturity-by-function bar chart.
+- **Dashboard** (`/`) — the landing page: a hero banner, then stat tiles
+  (frameworks, controls assessed, evidence items, overall weighted average
+  maturity) plus a score card per framework with a maturity-by-function bar
+  chart. All figures respect the current assessment scope (see below).
+- **Scope** (`/scope`) — define which controls apply to this engagement,
+  per framework, before or while assessing. Every control is in scope by
+  default; deselect what doesn't apply (individually or a whole function at
+  once) and add controls back from the overall catalog at any time.
 - **Assessment Workspace** (`/assessment`) — tabs across the three
-  frameworks. An accordion tree of functions → controls on the left (each row
-  shows a status icon); a detail panel on the right with a 0–3 maturity
-  rating selector, a notes textarea (autosaves on blur), and an evidence
-  linking control.
+  frameworks. An accordion tree of in-scope functions → controls on the left
+  (collapsed by default; each row shows a status icon); a detail panel on
+  the right with a 0–3 maturity rating selector, a notes textarea (autosaves
+  on blur), and an evidence linking control.
 - **Evidence Library** (`/evidence`) — a grid of evidence cards, an upload
-  dialog (file upload or interview note), a preview dialog, and delete.
+  dialog (multi-file upload, or an interview note), a preview dialog, and
+  delete.
 - **Reports** (`/reports`) — tabbed per-framework maturity-by-function chart
-  plus a "top gaps" table (controls unrated or rated ≤ 1, worst first).
+  plus a "top gaps" table (in-scope controls unrated or rated ≤ 1, worst
+  first).
 
 ## Architecture
 
@@ -106,6 +113,19 @@ Pure functions with no I/O: `scoreFunction`, `scoreFramework`,
 call these with the frameworks + observations they already have from
 `AppDataContext` — the scoring math lives in exactly one place.
 
+### Assessment scope (`src/utils/scope.ts`, `scopeService.ts`)
+
+A `ScopeSelection` (`{ frameworkId, includedControlIds }`) records which
+controls of a framework are in scope for this engagement; **no record for a
+framework means "everything is in scope"** (the default), so the app works
+unchanged until someone visits the Scope page. `applyScope(framework,
+includedControlIds)` in `utils/scope.ts` returns a copy of a `Framework`
+containing only in-scope controls (and only the functions that still have at
+least one); Dashboard, Assessment, and Reports all call it before scoring or
+rendering, so narrowing scope is the single lever that changes what's shown
+and counted everywhere. `scopeService.ts` follows the same
+storage-layer pattern as the other two services.
+
 ### Charts (`src/components/MaturityBarChart.tsx`)
 
 A plain SVG horizontal bar chart: one bar per function/category, length =
@@ -114,27 +134,40 @@ already carry identity — these aren't distinct series), recessive gridlines
 at 0/1/2/3, the numeric average at the bar end, and a hover/focus tooltip
 showing "X of Y controls rated". No chart library is used.
 
+### Visual design
+
+The UI follows Deloitte's digital brand guidance: Deloitte Green (`#86BC25`)
+as the primary accent (buttons, active nav, chart bars, stat-tile accents), a
+4px green gradient signature bar at the very top of the app, Open Sans
+typography, and a subtle circular motif on the Dashboard hero — decorative
+only, kept low-opacity so it never competes with the data. Colors and
+typography live in `src/theme.ts` (MUI theme) plus `index.html` (font
+loading) and `src/index.css` (page background).
+
 ## Project layout
 
 ```
 src/
-  types/              domain model (Framework, Control, Observation, Evidence, ...)
+  types/              domain model (Framework, Control, Observation, Evidence, ScopeSelection, ...)
   data/frameworks/     framework registry (samm.ts, nistCsf.ts, ssdf.ts, index.ts)
   storage/             low-level IndexedDB / localStorage wrappers
   services/            the only modules that read/write persisted data
   context/             AppDataContext — the only way pages touch persisted data
   utils/scoring.ts     pure scoring functions shared by Dashboard + Reports
+  utils/scope.ts       pure scope-filtering functions shared by Dashboard/Assessment/Reports
   components/          shared UI (Layout, MaturityBarChart, evidence dialogs)
-  pages/               DashboardPage, AssessmentPage, EvidencePage, ReportsPage
+  pages/               DashboardPage, ScopePage, AssessmentPage, EvidencePage, ReportsPage
 ```
 
 ## Verification performed
 
 - `npm install && npm run build` — typecheck + production build succeed.
 - `npm run lint` — oxlint clean, no warnings.
-- Drove the app end-to-end in headless Chromium (Playwright) across all four
-  pages: added a file and an interview note to the Evidence Library, rated
-  and annotated controls (with linked evidence) in the Assessment Workspace
-  across two frameworks, and confirmed the Dashboard and Reports charts
-  update live with correct averages and gap listings. No console or page
-  errors were observed.
+- Drove the app end-to-end in headless Chromium (Playwright) across all five
+  pages: added a file and an interview note to the Evidence Library (plus a
+  multi-file upload creating separate evidence items), narrowed scope on the
+  Scope page and confirmed the change flowed through to the Assessment
+  Workspace/Dashboard/Reports, rated and annotated controls (with linked
+  evidence) in the Assessment Workspace across two frameworks, and confirmed
+  the Dashboard and Reports charts update live with correct averages and gap
+  listings. No console or page errors were observed.

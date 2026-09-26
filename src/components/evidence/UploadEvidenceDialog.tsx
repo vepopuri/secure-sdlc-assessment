@@ -3,14 +3,17 @@ import {
   Autocomplete,
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   MenuItem,
+  Stack,
   Tab,
   Tabs,
   TextField,
+  Typography,
 } from '@mui/material';
 import type { EvidenceKind } from '../../types';
 import { useAppData } from '../../context/useAppData';
@@ -38,8 +41,8 @@ export function UploadEvidenceDialog({ open, onClose }: { open: boolean; onClose
   const { addEvidenceFile, addEvidenceNote } = useAppData();
   const [tab, setTab] = useState<'file' | 'note'>('file');
 
-  // File tab state
-  const [file, setFile] = useState<File | null>(null);
+  // File tab state — supports selecting multiple files at once.
+  const [files, setFiles] = useState<File[]>([]);
   const [fileTitle, setFileTitle] = useState('');
   const [fileKind, setFileKind] = useState<EvidenceKind>('document');
   const [fileTags, setFileTags] = useState<string[]>([]);
@@ -54,7 +57,7 @@ export function UploadEvidenceDialog({ open, onClose }: { open: boolean; onClose
   const [saving, setSaving] = useState(false);
 
   function resetAndClose() {
-    setFile(null);
+    setFiles([]);
     setFileTitle('');
     setFileKind('document');
     setFileTags([]);
@@ -67,11 +70,45 @@ export function UploadEvidenceDialog({ open, onClose }: { open: boolean; onClose
     onClose();
   }
 
+  function handleFilesSelected(selected: File[]) {
+    setFiles(selected);
+    if (selected.length === 1) {
+      setFileTitle(selected[0].name);
+      setFileKind(guessKindFromMime(selected[0].type));
+    }
+  }
+
+  function removeFileAt(index: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSaveFile() {
-    if (!file || !fileTitle.trim()) return;
+    if (files.length === 0) return;
     setSaving(true);
     try {
-      await addEvidenceFile({ file, title: fileTitle.trim(), kind: fileKind, tags: fileTags, notes: fileNotes });
+      if (files.length === 1) {
+        await addEvidenceFile({
+          file: files[0],
+          title: fileTitle.trim() || files[0].name,
+          kind: fileKind,
+          tags: fileTags,
+          notes: fileNotes,
+        });
+      } else {
+        // Each file becomes its own evidence item, named after the file itself;
+        // the shared tags/notes apply to all of them.
+        await Promise.all(
+          files.map((f) =>
+            addEvidenceFile({
+              file: f,
+              title: f.name,
+              kind: guessKindFromMime(f.type),
+              tags: fileTags,
+              notes: fileNotes,
+            }),
+          ),
+        );
+      }
       resetAndClose();
     } finally {
       setSaving(false);
@@ -89,7 +126,8 @@ export function UploadEvidenceDialog({ open, onClose }: { open: boolean; onClose
     }
   }
 
-  const canSave = tab === 'file' ? Boolean(file && fileTitle.trim()) : Boolean(noteTitle.trim() && noteBody.trim());
+  const canSave =
+    tab === 'file' ? files.length > 0 && (files.length > 1 || Boolean(fileTitle.trim())) : Boolean(noteTitle.trim() && noteBody.trim());
 
   return (
     <Dialog open={open} onClose={resetAndClose} maxWidth="sm" fullWidth>
@@ -102,40 +140,55 @@ export function UploadEvidenceDialog({ open, onClose }: { open: boolean; onClose
         {tab === 'file' ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <Button variant="outlined" component="label">
-              {file ? file.name : 'Choose file'}
+              {files.length === 0 ? 'Choose file(s)' : `${files.length} file${files.length > 1 ? 's' : ''} selected`}
               <input
                 type="file"
                 hidden
-                onChange={(e) => {
-                  const selected = e.target.files?.[0];
-                  if (selected) {
-                    setFile(selected);
-                    if (!fileTitle) setFileTitle(selected.name);
-                    setFileKind(guessKindFromMime(selected.type));
-                  }
-                }}
+                multiple
+                onChange={(e) => handleFilesSelected(Array.from(e.target.files ?? []))}
               />
             </Button>
-            <TextField
-              label="Title"
-              value={fileTitle}
-              onChange={(e) => setFileTitle(e.target.value)}
-              fullWidth
-              required
-            />
-            <TextField
-              select
-              label="Kind"
-              value={fileKind}
-              onChange={(e) => setFileKind(e.target.value as EvidenceKind)}
-              fullWidth
-            >
-              {FILE_KIND_OPTIONS.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </MenuItem>
-              ))}
-            </TextField>
+
+            {files.length > 1 && (
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                  Each file will be added as its own evidence item, named after the file.
+                </Typography>
+                <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
+                  {files.map((f, index) => (
+                    <Chip key={`${f.name}-${index}`} label={f.name} size="small" onDelete={() => removeFileAt(index)} />
+                  ))}
+                </Stack>
+              </Box>
+            )}
+
+            {files.length <= 1 && (
+              <>
+                <TextField
+                  label="Title"
+                  value={fileTitle}
+                  onChange={(e) => setFileTitle(e.target.value)}
+                  fullWidth
+                  required
+                  disabled={files.length === 0}
+                />
+                <TextField
+                  select
+                  label="Kind"
+                  value={fileKind}
+                  onChange={(e) => setFileKind(e.target.value as EvidenceKind)}
+                  fullWidth
+                  disabled={files.length === 0}
+                >
+                  {FILE_KIND_OPTIONS.map((opt) => (
+                    <MenuItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </>
+            )}
+
             <Autocomplete
               multiple
               freeSolo

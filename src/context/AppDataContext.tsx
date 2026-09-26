@@ -5,9 +5,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Evidence, Observation } from '../types';
+import type { Evidence, Observation, ScopeSelection } from '../types';
 import * as evidenceService from '../services/evidenceService';
 import * as assessmentService from '../services/assessmentService';
+import * as scopeService from '../services/scopeService';
 import type { AddFileInput, AddNoteInput } from '../services/evidenceService';
 import type { UpsertObservationInput } from '../services/assessmentService';
 import { observationId } from '../types';
@@ -16,14 +17,16 @@ import { AppDataContext, type AppDataContextValue } from './appDataContextDefini
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [observations, setObservations] = useState<Observation[]>([]);
+  const [scope, setScope] = useState<ScopeSelection[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([evidenceService.list(), assessmentService.list()]).then(([ev, obs]) => {
+    Promise.all([evidenceService.list(), assessmentService.list(), scopeService.list()]).then(([ev, obs, scp]) => {
       if (cancelled) return;
       setEvidence(ev);
       setObservations(obs);
+      setScope(scp);
       setLoading(false);
     });
     return () => {
@@ -70,10 +73,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     [observations],
   );
 
+  const setScopeIncluded = useCallback(async (frameworkId: string, includedControlIds: string[]) => {
+    const saved = await scopeService.setIncluded(frameworkId, includedControlIds);
+    setScope((prev) => {
+      const index = prev.findIndex((s) => s.frameworkId === frameworkId);
+      if (index >= 0) {
+        const next = [...prev];
+        next[index] = saved;
+        return next;
+      }
+      return [...prev, saved];
+    });
+    return saved;
+  }, []);
+
   const value = useMemo<AppDataContextValue>(
     () => ({
       evidence,
       observations,
+      scope,
       loading,
       addEvidenceFile,
       addEvidenceNote,
@@ -81,8 +99,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       getEvidenceObjectUrl,
       upsertObservation,
       getObservation,
+      setScopeIncluded,
     }),
-    [evidence, observations, loading, addEvidenceFile, addEvidenceNote, removeEvidence, getEvidenceObjectUrl, upsertObservation, getObservation],
+    [
+      evidence,
+      observations,
+      scope,
+      loading,
+      addEvidenceFile,
+      addEvidenceNote,
+      removeEvidence,
+      getEvidenceObjectUrl,
+      upsertObservation,
+      getObservation,
+      setScopeIncluded,
+    ],
   );
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
